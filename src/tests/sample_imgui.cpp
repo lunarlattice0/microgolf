@@ -1,7 +1,9 @@
+// TEST FOR IMGUI
+
 #include <raylib.h>
 
-#include "vendor/imgui/imgui.h"
-#include "rlImGui.h"
+#include "../vendor/imgui/imgui.h"
+#include "../rlImGui.h"
 
 // Todo: Consider mapload as first argument
 int main(void) {
@@ -14,8 +16,13 @@ int main(void) {
     SetTargetFPS(60);
 
     rlImGuiSetup(true);
+    ImGuiIO* io = &ImGui::GetIO();
+    io->IniFilename = NULL;
+    io->LogFilename = NULL;
 
     while (!WindowShouldClose()) {
+
+
         BeginDrawing();
         {
             rlImGuiBegin();
@@ -24,7 +31,7 @@ int main(void) {
             bool open = true;
             ImGui::ShowDemoWindow(&open);
             rlImGuiEnd();
-            DrawText("Text", 0, 0, 50, BLACK);
+            DrawText("IMGUI TEST", 0, 0, 50, BLACK);
         }
         EndDrawing();
     }

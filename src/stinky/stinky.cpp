@@ -1,9 +1,12 @@
+// TODO
+// Something is desperately broken with disconnect messages, the client is not sending them at all.
+// we are STILL leaking data...
+
 #include "stinky/stinky.hpp"
-#include <cstddef>
 #include <enet/enet.h>
+#include <iostream>
 #include <raylib.h>
 #include <sstream>
-#include <sys/wait.h>
 
 // Run me in a seperate thread!
 void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag) {
@@ -24,7 +27,7 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                 enet_peer_send(event->peer, 0, packet);
 
                 // Fill out a struct detailing the peer's information
-                PeerInformation * pi = new PeerInformation();
+                PeerInformation * pi = new PeerInformation(); // Why does this cause a memory leak???
 
                 event->peer->data = static_cast<void*>(pi);
 
@@ -99,6 +102,7 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
             }
             case ENET_EVENT_TYPE_DISCONNECT:
             {
+                // Why aren't Disconnect messages being sent???
                 std::stringstream disconnectMessage;
                 char friendlyHostIp[64];
 
@@ -106,13 +110,14 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                 disconnectMessage << "Peer disconnecting: " << std::string(friendlyHostIp) << std::endl;
                 TraceLog(LOG_INFO, disconnectMessage.str().c_str());
                 delete(static_cast<PeerInformation*>(event->peer->data));
-                event->peer->data = NULL;
 
-                for (auto it = std::begin(this->peers); it != std::end(this->peers); ++it) {
-                    if (*it == event->peer) {
-                        this->peers.erase(it);
+                // Iterators cause weird behavior here. Why?
+                for (unsigned long i = 0; i < this->peers.size(); ++i) {
+                    if (event->peer == this->peers[i]) {
+                        this->peers.erase(peers.begin() + i);
                     }
                 }
+
 
                 break;
             }
@@ -147,17 +152,17 @@ bool Stinky::Host::InitializeEnetAndCrypto() {
 
 // These aren't available in the superclass, since we need to be sure that the constructor has been called first.
 void Stinky::Server::Begin() {
+    this->enet_thread_stop_flag = false;
     RecvLoop(this->host, &this->event, &this->enet_thread_stop_flag);
 }
+
 void Stinky::Client::Begin() {
+    this->enet_thread_stop_flag = false;
     ENetPeer * peer = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
     if (peer == NULL) {
         TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
         return;
     }
-    ENetPacket * packet = enet_packet_create(this->HostKeys->host_pk, crypto_kx_PUBLICKEYBYTES, ENET_PACKET_FLAG_RELIABLE);
-    enet_peer_send(peer, 0, packet);
-    enet_host_flush(this->host);
     RecvLoop(this->host, &this->event, &this->enet_thread_stop_flag);
 }
 
@@ -183,20 +188,25 @@ Stinky::Server::Server(ENetAddress address, enet_uint8 clients, enet_uint8 chann
 }
 
 Stinky::Server::~Server() {
-    this->enet_thread_stop_flag = true;
+    this->Stop();
+    delete(this->HostKeys);
+    enet_host_destroy(this->host);
+}
 
+void Stinky::Server::Stop() {
+    this->enet_thread_stop_flag = true;
+    // Cleanly shut down first
     for (auto it = std::begin(this->peers); it != std::end(this->peers); ++it) {
         enet_peer_disconnect_later(*it, 0);
     }
-    delete(this->HostKeys);
-    this->HostKeys = nullptr;
-    enet_host_destroy(this->host);
 }
 
 Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth) {
     if (!this->InitializeEnetAndCrypto()) {
         throw std::runtime_error("A subsystem failed to start!");
     }
+
+    this->HostKeys->isServer = false;
     this->host = enet_host_create(NULL, outgoing, channels, bandwidth, bandwidth);
 
     if (host == NULL) {
@@ -207,10 +217,15 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
     this->serverAddress = serverAddress;
 
 }
+void Stinky::Client::Stop() {
+    this->enet_thread_stop_flag = true;
+    for (auto it = std::begin(this->peers); it != std::end(this->peers); ++it) {
+        enet_peer_disconnect_later(*it, 0);
+    }
+}
 
 Stinky::Client::~Client() {
-    this->enet_thread_stop_flag = true;
+    this->Stop();
     delete(this->HostKeys);
-    this->HostKeys = nullptr;
     enet_host_destroy(this->host);
 }

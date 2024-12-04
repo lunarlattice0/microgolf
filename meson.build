@@ -45,9 +45,17 @@ sample_imgui_source_files = [
 e_sample_imgui = executable('sample_imgui', ['src/rlImGui.cpp', sample_imgui_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
 test('sample_imgui', e_sample_imgui)
 
-sample_stinky_basic_source_files = [
-    'src/tests/sample_stinky_basic.cpp',
+sample_stinky_server_source_files = [
+    'src/tests/sample_stinky_server.cpp',
     'src/stinky/stinky.cpp',
 ]
-e_sample_stinky = executable('sample_stinky_basic', ['src/rlImGui.cpp', sample_stinky_basic_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
-test('sample_stinky_basic', e_sample_stinky)
+e_ = executable('sample_stinky_server', ['src/rlImGui.cpp', sample_stinky_server_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
+test('sample_stinky_server', e_)
+
+sample_stinky_client_source_files = [
+    'src/tests/sample_stinky_client.cpp',
+    'src/stinky/stinky.cpp',
+]
+
+e_ = executable('sample_stinky_client', ['src/rlImGui.cpp', sample_stinky_client_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
+test('sample_stinky_client', e_)

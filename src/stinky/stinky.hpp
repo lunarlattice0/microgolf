@@ -41,21 +41,12 @@ namespace Stinky {
                 unsigned char * peer_pk;
                 unsigned char rx_Sk[crypto_kx_SESSIONKEYBYTES];
                 unsigned char tx_Sk[crypto_kx_SESSIONKEYBYTES];
-                /*
-                std::vector<unsigned char> peer_pk; // peer pubkey
-                std::vector<unsigned char> rx_Sk; // receive data using session key
-                std::vector<unsigned char> tx_Sk; // transmit data using session key
-                */
             };
 
             struct Keys {
                 // Since libsodium func calls behave differently whether we are client or host:
                 bool isServer = false;
                 // Host publickey and private key pair.
-                /*
-                std::vector<unsigned char> host_pk;
-                std::vector<unsigned char> host_sk;
-                */
                 unsigned char host_pk[crypto_kx_PUBLICKEYBYTES];
                 unsigned char host_sk[crypto_kx_SECRETKEYBYTES];
             };
@@ -76,8 +67,10 @@ namespace Stinky {
         public:
             // Reference is 32 clients, 8 channels, 0 (unlimited) bandwidth
             void Begin();
+            void Stop();
             Server(ENetAddress address, enet_uint8 clients, enet_uint8 channels, enet_uint32 bandwidth);
             ~Server();
+
     };
 
     class Client : private Host {
@@ -85,6 +78,7 @@ namespace Stinky {
             ENetAddress * serverAddress;
         public:
             void Begin();
+            void Stop();
             // Reference is 1 outgoing connection, 8 channels, 0 (unlimited) bandwidth
             Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth);
             ~Client();

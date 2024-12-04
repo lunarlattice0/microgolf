@@ -23,12 +23,6 @@ int main(void) {
     adr.host = ENET_HOST_ANY;
     adr.port = 6969;
 
-    Stinky::Server * server = new Stinky::Server(adr, 8, 8, 0);
-
-    std::thread serverThread([&server] {
-        server->Begin();
-    });
-
     ENetAddress address;
     enet_address_set_host(&address, "localhost");
     address.port = 6969;
@@ -45,17 +39,18 @@ int main(void) {
             ClearBackground(WHITE);
 
             rlImGuiEnd();
-            DrawText("STINKY TEST CHECK CONSOLE", 0, 0, 50, BLACK);
+            DrawText("STINKY CLIENT", 0, 0, 50, BLACK);
         }
         EndDrawing();
     }
-    delete(client);
-    clientThread.join();
 
-    delete(server);
-    serverThread.join();
     rlImGuiShutdown();
 
     CloseWindow();
+
+    client->Stop();
+    clientThread.join();
+    delete(client);
+
     return 0;
 }

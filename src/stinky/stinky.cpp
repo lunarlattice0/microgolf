@@ -29,7 +29,7 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                 // Fill out a struct detailing the peer's information
                 PeerInformation * pi = new PeerInformation(); // Why does this cause a memory leak???
 
-                event->peer->data = static_cast<void*>(pi);
+                event->peer->data = static_cast<void*>(&pi);
 
                 break;
             }
@@ -98,6 +98,8 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                 // We're NOT in key-exchange phase, so treat data is gamedata
                 // STUB
 
+                enet_packet_destroy(event->packet);
+
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT:
@@ -111,7 +113,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                 TraceLog(LOG_INFO, disconnectMessage.str().c_str());
                 delete(static_cast<PeerInformation*>(event->peer->data));
 
-                // Iterators cause weird behavior here. Why?
                 for (unsigned long i = 0; i < this->peers.size(); ++i) {
                     if (event->peer == this->peers[i]) {
                         this->peers.erase(peers.begin() + i);
@@ -197,7 +198,7 @@ void Stinky::Server::Stop() {
     this->enet_thread_stop_flag = true;
     // Cleanly shut down first
     for (auto it = std::begin(this->peers); it != std::end(this->peers); ++it) {
-        enet_peer_disconnect_later(*it, 0);
+        enet_peer_disconnect_now(*it, 0);
     }
 }
 
@@ -220,7 +221,7 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
 void Stinky::Client::Stop() {
     this->enet_thread_stop_flag = true;
     for (auto it = std::begin(this->peers); it != std::end(this->peers); ++it) {
-        enet_peer_disconnect_later(*it, 0);
+        enet_peer_disconnect_now(*it, 0);
     }
 }
 

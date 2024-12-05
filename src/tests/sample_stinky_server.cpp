@@ -2,9 +2,12 @@
 
 #include <enet/enet.h>
 #include <raylib.h>
+#include "packettypes.hpp"
 #include "stinky/stinky.hpp"
 #include "../vendor/imgui/imgui.h"
+#include "../vendor/imgui/misc/cpp/imgui_stdlib.h"
 #include "../rlImGui.h"
+
 
 int main(void) {
     const int screenWidth = 640;
@@ -31,6 +34,12 @@ int main(void) {
             server->RecvLoop();
             rlImGuiBegin();
             ClearBackground(WHITE);
+
+            ImGui::Begin("Test");
+            if (ImGui::Button("send test packet")) {
+                unsigned char test[8] = {"0123456"};
+            }
+            ImGui::End();
 
             rlImGuiEnd();
             DrawText("STINKY SERVER", 0, 0, 50, BLACK);

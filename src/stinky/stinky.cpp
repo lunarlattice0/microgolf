@@ -20,22 +20,41 @@ If running client:
 */
 
 #include "stinky/stinky.hpp"
+#include <cstring>
 #include <enet/enet.h>
 #include <iostream>
 #include <raylib.h>
+#include <sodium/crypto_secretbox.h>
 #include <sstream>
+#include <vector>
 
-const std::vector<ENetPeer *> * Stinky::Host::GetPeers() {
-    return &this->peers;
+void Stinky::Host::FormatAndSend(ENetPeer * peer, DataPacket * dp) {
+    // PacketType header + data
+    PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
+    unsigned char nonce[crypto_secretbox_NONCEBYTES];
+
+    unsigned char packet [sizeof(*dp)];
+    std::memcpy(packet, dp, sizeof(*dp));
+
+    unsigned char ciphertext [crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + sizeof(packet)];
+
+    randombytes_buf(nonce, sizeof nonce);
+
+    crypto_secretbox_easy(&ciphertext[crypto_secretbox_NONCEBYTES], &packet[0], sizeof(packet), nonce, pi->tx_Sk);
+    std::memcpy(&ciphertext[0], nonce, crypto_secretbox_NONCEBYTES);
+    ENetPacket * enet_packet = enet_packet_create(&ciphertext[0], sizeof(ciphertext), ENET_PACKET_FLAG_RELIABLE);
+    enet_peer_send(peer, 0, enet_packet);
+
+    // the packet is formatted as
+    // NONCEBYTES + ciphertext.
 }
 
-const std::vector<ENetPeer *> * Stinky::Client::GetPeers() {
-    return Stinky::Host::GetPeers();
+void Stinky::Host::DecryptAndFormat(ENetPeer * peer, unsigned char * packet, DataPacket * dp) {
+    PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
+    unsigned char nonce[crypto_secretbox_NONCEBYTES];
+    std::memcpy(nonce, packet, crypto_secretbox_NONCEBYTES);
 }
 
-const std::vector<ENetPeer *> * Stinky::Server::GetPeers() {
-    return Stinky::Host::GetPeers();
-}
 void Stinky::Server::RecvLoop() {
     Stinky::Host::RecvLoop(this->host, &this->event, 0);
 }
@@ -43,7 +62,6 @@ void Stinky::Server::RecvLoop() {
 void Stinky::Client::RecvLoop(unsigned int waitTime) {
     Stinky::Host::RecvLoop(this->host, &this->event, waitTime);
 }
-
 // Run me in a seperate thread!
 void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int waitTime) {
     // TODO: Why does this leak memory?
@@ -59,13 +77,11 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                 TraceLog(LOG_INFO, peerMessage.str().c_str());
 
                 // Now we need to send off our public key to the client and await their public key to complete key exchange.
-                ENetPacket * packet = enet_packet_create(this->HostKeys->host_pk, crypto_kx_PUBLICKEYBYTES, ENET_PACKET_FLAG_RELIABLE);
+                ENetPacket * packet = enet_packet_create(this->HostKeys->host_pk, crypto_kx_PUBLICKEYBYTES + 1, ENET_PACKET_FLAG_RELIABLE);
 
                 enet_peer_send(event->peer, 0, packet);
 
                 // Fill out a struct detailing the peer's information
-                //PeerInformation * pi = new PeerInformation(); // Why does this cause a memory leak???
-
                 event->peer->data = static_cast<void*>(new PeerInformation);
 
                 break;
@@ -79,10 +95,15 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                     // Okay, we are, so try to calculate the session key.
 
                     // Make sure the packet received is the same length as the pubkey length.
-                    if (event->packet->dataLength != crypto_kx_PUBLICKEYBYTES) {
+                    if (event->packet->dataLength != crypto_kx_PUBLICKEYBYTES + 1) {
                         // eject the peer immediately.
                         enet_peer_reset(event->peer);
+                        delete(pi);
+                        event->peer->data = NULL;
+                        goto destroy_packet;
+                        //TODO: Cleanup this peer.
                     }
+
 
                     pi->peer_pk = event->packet->data;
 
@@ -98,7 +119,12 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                             std::stringstream badClientMessage;
                             badClientMessage << "A client sent a bad public key! Disconnecting." << std::endl;
                             TraceLog(LOG_INFO, badClientMessage.str().c_str());
+
                             enet_peer_reset(event->peer);
+                            delete(pi);
+                            event->peer->data = NULL;
+                            goto destroy_packet;
+                            break;
                         }
                     } else {
                         if (crypto_kx_client_session_keys(
@@ -115,12 +141,15 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                             TraceLog(LOG_INFO, badServerMessage.str().c_str());
 
                             enet_peer_reset(event->peer);
+                            delete(pi);
+                            event->peer->data = NULL;
+                            goto destroy_packet;
+                            break;
                         }
                     }
 
                     // We're all good! Flag the key-exchange as complete.
                     pi->keyExCompleted = true;
-                    this->peers.push_back(event->peer);
 
                     std::stringstream keyExMessage;
 
@@ -130,11 +159,11 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                     keyExMessage << "Negotiation success for: " << std::string(friendlyHostIp) << ":" << event->peer->address.port << std::endl;
                     TraceLog(LOG_INFO, keyExMessage.str().c_str());
 
-                    break;
+
                 }
                 // We're NOT in key-exchange phase, so treat data is gamedata
                 // STUB
-
+                destroy_packet:
                 enet_packet_destroy(event->packet);
                 break;
             }
@@ -148,11 +177,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                 TraceLog(LOG_INFO, disconnectMessage.str().c_str());
                 delete(static_cast<PeerInformation*>(event->peer->data));
 
-                for (unsigned long i = 0; i < this->peers.size(); ++i) {
-                    if (event->peer == this->peers[i]) {
-                        this->peers.erase(peers.begin() + i);
-                    }
-                }
                 event->peer->data = NULL;
                 break;
             }
@@ -224,10 +248,10 @@ Stinky::Server::~Server() {
 }
 
 void Stinky::Server::Cleanup() {
-    for (unsigned i = 0; i < peers.size(); ++i) {
-        enet_peer_disconnect_now(peers[i], 0);
-        delete(static_cast<PeerInformation*>(peers[i]->data));
-        peers.erase(peers.begin()+i);
+    for (unsigned i = 0; i < this->host->connectedPeers; ++i) {
+        auto peer = &this->host->peers[i];
+        enet_peer_disconnect_now(peer, 0);
+        delete(static_cast<PeerInformation*>(peer->data));
     }
 }
 
@@ -248,10 +272,10 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
 
 }
 void Stinky::Client::Cleanup() {
-    for (unsigned i = 0; i < peers.size(); ++i) {
-        enet_peer_disconnect_now(peers[i], 0);
-        delete(static_cast<PeerInformation*>(peers[i]->data));
-        peers.erase(peers.begin()+i);
+    for (unsigned i = 0; i < this->host->connectedPeers; ++i) {
+        auto peer = &this->host->peers[i];
+        enet_peer_disconnect_now(peer, 0);
+        delete(static_cast<PeerInformation*>(peer->data));
     }
 }
 

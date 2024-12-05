@@ -6,21 +6,23 @@
 #include <enet/enet.h>
 #include <sodium.h>
 #include <thread>
-#include <vector>
+#include "packettypes.hpp"
 
 // Maximum message size in bytes
 // This is not related to MTU, but rather the maximum packet size to decrypt. This is to stop DoS attacks against a server.
 #define MAX_MESSAGE_SIZE 3000
 
 namespace Stinky {
+    // Check packettypes.hpp for packet type designations.
+    struct DataPacket {
+        PacketType pt;
+        unsigned char data[];
+    };
 
     class Host { // Abstract class that Server and Client derive from.
-
         public:
-            const std::vector<ENetPeer *> * GetPeers();
-        protected:
-            // List of peers that are validated and safe to communicate with.
-            std::vector<ENetPeer *> peers;
+            static void FormatAndSend(ENetPeer * peer, DataPacket * dp);
+            static void DecryptAndFormat(ENetPeer * peer, unsigned char * packet, DataPacket * dp);
 
             // ENetHost container for client and server.
             ENetHost * host;
@@ -60,7 +62,7 @@ namespace Stinky {
 
     };
 
-    class Server : private Host {
+    class Server : public Host {
         private:
         public:
             // Reference is 32 clients, 8 channels, 0 (unlimited) bandwidth
@@ -68,15 +70,13 @@ namespace Stinky {
             void RecvLoop();
             Server(ENetAddress address, enet_uint8 clients, enet_uint8 channels, enet_uint32 bandwidth);
             ~Server();
-            const std::vector<ENetPeer *> * GetPeers();
 
     };
 
-    class Client : private Host {
+    class Client : public Host {
         private:
-            ENetAddress * serverAddress;
         public:
-            const std::vector<ENetPeer *> * GetPeers();
+            ENetAddress * serverAddress;
             void PrepareConnect();
             void Cleanup();
             // Reference is 1 outgoing connection, 8 channels, 0 (unlimited) bandwidth

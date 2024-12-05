@@ -1,7 +1,6 @@
 // TEST FOR BASIC STINKY FUNCTIONALITY
 
 #include <enet/enet.h>
-#include <exception>
 #include <raylib.h>
 #include "stinky/stinky.hpp"
 #include "../vendor/imgui/imgui.h"
@@ -33,8 +32,8 @@ int main(void) {
     bool exit_flag = false;
     std::thread connectionAttempt([&client, &exit_flag]{
         do {
-            client->RecvLoop(500);
-        } while (client->GetPeers()->size() == 0 && exit_flag == false);
+            client->RecvLoop(100);
+        } while (client->host->connectedPeers == 0 && exit_flag == false);
         TraceLog(LOG_INFO, "Got connection.");
     });
     while (!WindowShouldClose()) {

@@ -27,9 +27,9 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                 enet_peer_send(event->peer, 0, packet);
 
                 // Fill out a struct detailing the peer's information
-                PeerInformation * pi = new PeerInformation(); // Why does this cause a memory leak???
+                //PeerInformation * pi = new PeerInformation(); // Why does this cause a memory leak???
 
-                event->peer->data = static_cast<void*>(&pi);
+                event->peer->data = static_cast<void*>(new PeerInformation);
 
                 break;
             }

@@ -1,6 +1,23 @@
 // TODO
-// Something is desperately broken with disconnect messages, the client is not sending them at all.
 // we are STILL leaking data...
+
+/*
+Workflow:
+
+If running server:
+1) Create a Stinky::Server::Server() object
+2) Tie RecvLoop to the game loop
+3) After finishing, call Stinky::Server::Cleanup(). This disconnects all clients, but you can still call RecvLoop to reaccept clients.
+4) Call destructor on Stinky::Server. This will destroy the host object, and is irrecoverable.
+
+If running client:
+1) Create a Stinky::Client::Client() object
+2) Run Stinky::Client::PrepareConnect(). This attempts to connect to the server.
+3) Run RecvLoop with waitTime of > 0. This will attempt to negotiate a connection with the server.
+4) If RecvLoop returns, timedOut may be true or false.
+5) Call Stinky::Client::Cleanup(). This will disconnect from the server, but you can repeat from step 2 to begin a new session.
+6) Call destructor on Stinky::Client. This will destroy the host object, and is irrecoverable.
+*/
 
 #include "stinky/stinky.hpp"
 #include <enet/enet.h>
@@ -8,10 +25,29 @@
 #include <raylib.h>
 #include <sstream>
 
+const std::vector<ENetPeer *> * Stinky::Host::GetPeers() {
+    return &this->peers;
+}
+
+const std::vector<ENetPeer *> * Stinky::Client::GetPeers() {
+    return Stinky::Host::GetPeers();
+}
+
+const std::vector<ENetPeer *> * Stinky::Server::GetPeers() {
+    return Stinky::Host::GetPeers();
+}
+void Stinky::Server::RecvLoop() {
+    Stinky::Host::RecvLoop(this->host, &this->event, 0);
+}
+
+void Stinky::Client::RecvLoop(unsigned int waitTime) {
+    Stinky::Host::RecvLoop(this->host, &this->event, waitTime);
+}
+
 // Run me in a seperate thread!
-void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag, unsigned int waitTime = 0) {
-    unsigned int internalWaitTime = waitTime;
-    while (enet_host_service(host, event, internalWaitTime) > 0 || *stopFlag == false) {
+void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int waitTime) {
+    // TODO: Why does this leak memory?
+    while (enet_host_service(host, event, waitTime) > 0) {
         switch (event->type) {
             case ENET_EVENT_TYPE_CONNECT:
             {
@@ -94,9 +130,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag,
                     keyExMessage << "Negotiation success for: " << std::string(friendlyHostIp) << ":" << event->peer->address.port << std::endl;
                     TraceLog(LOG_INFO, keyExMessage.str().c_str());
 
-                    // Reset back to normal waiting periods for clients that were waiting.
-                    internalWaitTime = 0;
-
                     break;
                 }
                 // We're NOT in key-exchange phase, so treat data is gamedata
@@ -107,7 +140,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag,
             }
             case ENET_EVENT_TYPE_DISCONNECT:
             {
-                // Why aren't Disconnect messages being sent???
                 std::stringstream disconnectMessage;
                 char friendlyHostIp[64];
 
@@ -127,11 +159,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag,
             case ENET_EVENT_TYPE_NONE:
             {
                 // cool, nothing happened!
-
-                // If we were a client waiting for a connection, fail if the time has run out.
-                if (waitTime != 0 && this->peers.size() == 0) {
-                    return;
-                }
 
                 break;
             }
@@ -160,22 +187,12 @@ bool Stinky::Host::InitializeEnetAndCrypto() {
     return true;
 }
 
-// These aren't available in the superclass, since we need to be sure that the constructor has been called first.
-void Stinky::Server::Begin() {
-    this->enet_thread_stop_flag = false;
-    RecvLoop(this->host, &this->event, &this->enet_thread_stop_flag);
-}
-
-void Stinky::Client::Begin() {
-    this->enet_thread_stop_flag = false;
+void Stinky::Client::PrepareConnect() {
     ENetPeer * peer = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
     if (peer == NULL) {
         TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
         return;
     }
-    RecvLoop(this->host, &this->event, &this->enet_thread_stop_flag, 5000); // Try to catch peers in the first 5 seconds
-    this->Stop();
-
 }
 
 
@@ -201,18 +218,17 @@ Stinky::Server::Server(ENetAddress address, enet_uint8 clients, enet_uint8 chann
 }
 
 Stinky::Server::~Server() {
-    this->Stop();
+    this->Cleanup();
     delete(this->HostKeys);
     enet_host_destroy(this->host);
 }
 
-void Stinky::Server::Stop() {
+void Stinky::Server::Cleanup() {
     for (unsigned i = 0; i < peers.size(); ++i) {
         enet_peer_disconnect_now(peers[i], 0);
         delete(static_cast<PeerInformation*>(peers[i]->data));
         peers.erase(peers.begin()+i);
     }
-    this->enet_thread_stop_flag = true;
 }
 
 Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth) {
@@ -231,17 +247,16 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
     this->serverAddress = serverAddress;
 
 }
-void Stinky::Client::Stop() {
+void Stinky::Client::Cleanup() {
     for (unsigned i = 0; i < peers.size(); ++i) {
         enet_peer_disconnect_now(peers[i], 0);
         delete(static_cast<PeerInformation*>(peers[i]->data));
         peers.erase(peers.begin()+i);
     }
-    this->enet_thread_stop_flag = true;
 }
 
 Stinky::Client::~Client() {
-    this->Stop();
+    this->Cleanup();
     delete(this->HostKeys);
     enet_host_destroy(this->host);
 }

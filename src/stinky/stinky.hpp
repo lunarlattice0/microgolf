@@ -15,9 +15,10 @@
 namespace Stinky {
 
     class Host { // Abstract class that Server and Client derive from.
+
         public:
+            const std::vector<ENetPeer *> * GetPeers();
         protected:
-            void Begin();
             // List of peers that are validated and safe to communicate with.
             std::vector<ENetPeer *> peers;
 
@@ -26,9 +27,6 @@ namespace Stinky {
 
             // Seperate thread for the enet loop
             std::thread enet_thread;
-
-            // Stop when var is true;
-            bool enet_thread_stop_flag = false;
 
             // Event variable for Enet
             ENetEvent event;
@@ -58,7 +56,7 @@ namespace Stinky {
             // Will return true on success, and false on failure. A failure should be considered unrecoverable.
             bool InitializeEnetAndCrypto();
 
-            void RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag, unsigned int waitTime);
+            void RecvLoop(ENetHost * host, ENetEvent * event, unsigned int waitTime);
 
     };
 
@@ -66,10 +64,11 @@ namespace Stinky {
         private:
         public:
             // Reference is 32 clients, 8 channels, 0 (unlimited) bandwidth
-            void Begin();
-            void Stop();
+            void Cleanup();
+            void RecvLoop();
             Server(ENetAddress address, enet_uint8 clients, enet_uint8 channels, enet_uint32 bandwidth);
             ~Server();
+            const std::vector<ENetPeer *> * GetPeers();
 
     };
 
@@ -77,10 +76,12 @@ namespace Stinky {
         private:
             ENetAddress * serverAddress;
         public:
-            void Begin();
-            void Stop();
+            const std::vector<ENetPeer *> * GetPeers();
+            void PrepareConnect();
+            void Cleanup();
             // Reference is 1 outgoing connection, 8 channels, 0 (unlimited) bandwidth
             Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth);
             ~Client();
+            void RecvLoop(unsigned int waitTime);
     };
 }

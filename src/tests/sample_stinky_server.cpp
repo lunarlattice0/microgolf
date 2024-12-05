@@ -25,13 +25,10 @@ int main(void) {
 
     Stinky::Server * server = new Stinky::Server(adr, 8, 8, 0);
 
-    std::thread serverThread([&server] {
-        server->Begin();
-    });
-
     while (!WindowShouldClose()) {
         BeginDrawing();
         {
+            server->RecvLoop();
             rlImGuiBegin();
             ClearBackground(WHITE);
 
@@ -40,13 +37,12 @@ int main(void) {
         }
         EndDrawing();
     }
+    server->Cleanup();
 
     rlImGuiShutdown();
 
     CloseWindow();
 
-    server->Stop();
-    serverThread.join();
     delete(server);
 
     return 0;

@@ -1,6 +1,7 @@
 // TEST FOR BASIC STINKY FUNCTIONALITY
 
 #include <enet/enet.h>
+#include <exception>
 #include <raylib.h>
 #include "stinky/stinky.hpp"
 #include "../vendor/imgui/imgui.h"
@@ -27,15 +28,17 @@ int main(void) {
     enet_address_set_host(&address, "localhost");
     address.port = 6969;
     Stinky::Client * client = new Stinky::Client(&address, 1, 8, 0);
+    client->PrepareConnect();
 
-    std::thread clientThread([&client] {
-        client->Begin();
-        TraceLog(LOG_INFO, "Giving up connection.");
-        return;
+    bool exit_flag = false;
+    std::thread connectionAttempt([&client, &exit_flag]{
+        do {
+            client->RecvLoop(500);
+        } while (client->GetPeers()->size() == 0 && exit_flag == false);
+        TraceLog(LOG_INFO, "Got connection.");
     });
-
-
     while (!WindowShouldClose()) {
+        client->RecvLoop(0);
         BeginDrawing();
         {
             rlImGuiBegin();
@@ -46,14 +49,15 @@ int main(void) {
         }
         EndDrawing();
     }
-
+    exit_flag = true;
+    connectionAttempt.join();
     rlImGuiShutdown();
 
     CloseWindow();
 
-    client->Stop();
-    clientThread.join();
+    client->Cleanup();
     delete(client);
+
 
     return 0;
 }

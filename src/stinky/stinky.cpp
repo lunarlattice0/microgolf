@@ -101,7 +101,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                         delete(pi);
                         event->peer->data = NULL;
                         goto destroy_packet;
-                        //TODO: Cleanup this peer.
                     }
 
 
@@ -124,7 +123,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                             delete(pi);
                             event->peer->data = NULL;
                             goto destroy_packet;
-                            break;
                         }
                     } else {
                         if (crypto_kx_client_session_keys(
@@ -144,7 +142,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                             delete(pi);
                             event->peer->data = NULL;
                             goto destroy_packet;
-                            break;
                         }
                     }
 

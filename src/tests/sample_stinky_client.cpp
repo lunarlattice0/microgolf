@@ -30,7 +30,10 @@ int main(void) {
 
     std::thread clientThread([&client] {
         client->Begin();
+        TraceLog(LOG_INFO, "Giving up connection.");
+        return;
     });
+
 
     while (!WindowShouldClose()) {
         BeginDrawing();

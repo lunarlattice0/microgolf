@@ -9,8 +9,9 @@
 #include <sstream>
 
 // Run me in a seperate thread!
-void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag) {
-    while (enet_host_service(host, event, 0) > 0 || *stopFlag == false) {
+void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag, unsigned int waitTime = 0) {
+    unsigned int internalWaitTime = waitTime;
+    while (enet_host_service(host, event, internalWaitTime) > 0 || *stopFlag == false) {
         switch (event->type) {
             case ENET_EVENT_TYPE_CONNECT:
             {
@@ -93,6 +94,9 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                     keyExMessage << "Negotiation success for: " << std::string(friendlyHostIp) << ":" << event->peer->address.port << std::endl;
                     TraceLog(LOG_INFO, keyExMessage.str().c_str());
 
+                    // Reset back to normal waiting periods for clients that were waiting.
+                    internalWaitTime = 0;
+
                     break;
                 }
                 // We're NOT in key-exchange phase, so treat data is gamedata
@@ -123,10 +127,17 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
             case ENET_EVENT_TYPE_NONE:
             {
                 // cool, nothing happened!
+
+                // If we were a client waiting for a connection, fail if the time has run out.
+                if (waitTime != 0 && this->peers.size() == 0) {
+                    return;
+                }
+
                 break;
             }
         }
     }
+    return;
 };
 
 bool Stinky::Host::InitializeEnetAndCrypto() {
@@ -162,8 +173,11 @@ void Stinky::Client::Begin() {
         TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
         return;
     }
-    RecvLoop(this->host, &this->event, &this->enet_thread_stop_flag);
+    RecvLoop(this->host, &this->event, &this->enet_thread_stop_flag, 5000); // Try to catch peers in the first 5 seconds
+    this->Stop();
+
 }
+
 
 Stinky::Server::Server(ENetAddress address, enet_uint8 clients, enet_uint8 channels, enet_uint32 bandwidth) {
     if (!this->InitializeEnetAndCrypto()) {

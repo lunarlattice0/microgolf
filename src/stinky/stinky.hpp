@@ -16,8 +16,8 @@ namespace Stinky {
 
     class Host { // Abstract class that Server and Client derive from.
         public:
-            void Begin();
         protected:
+            void Begin();
             // List of peers that are validated and safe to communicate with.
             std::vector<ENetPeer *> peers;
 
@@ -58,7 +58,7 @@ namespace Stinky {
             // Will return true on success, and false on failure. A failure should be considered unrecoverable.
             bool InitializeEnetAndCrypto();
 
-            void RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag);
+            void RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag, unsigned int waitTime);
 
     };
 

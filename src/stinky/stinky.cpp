@@ -10,7 +10,7 @@
 
 // Run me in a seperate thread!
 void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag) {
-    while (enet_host_service(host, event, 0) >= 0 && *stopFlag == false) {
+    while (enet_host_service(host, event, 0) > 0 || *stopFlag == false) {
         switch (event->type) {
             case ENET_EVENT_TYPE_CONNECT:
             {
@@ -99,7 +99,6 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                 // STUB
 
                 enet_packet_destroy(event->packet);
-
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT:
@@ -118,8 +117,7 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, bool * stopFlag)
                         this->peers.erase(peers.begin() + i);
                     }
                 }
-
-
+                event->peer->data = NULL;
                 break;
             }
             case ENET_EVENT_TYPE_NONE:
@@ -195,11 +193,12 @@ Stinky::Server::~Server() {
 }
 
 void Stinky::Server::Stop() {
-    this->enet_thread_stop_flag = true;
-    // Cleanly shut down first
-    for (auto it = std::begin(this->peers); it != std::end(this->peers); ++it) {
-        enet_peer_disconnect_now(*it, 0);
+    for (unsigned i = 0; i < peers.size(); ++i) {
+        enet_peer_disconnect_now(peers[i], 0);
+        delete(static_cast<PeerInformation*>(peers[i]->data));
+        peers.erase(peers.begin()+i);
     }
+    this->enet_thread_stop_flag = true;
 }
 
 Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth) {
@@ -219,10 +218,12 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
 
 }
 void Stinky::Client::Stop() {
-    this->enet_thread_stop_flag = true;
-    for (auto it = std::begin(this->peers); it != std::end(this->peers); ++it) {
-        enet_peer_disconnect_now(*it, 0);
+    for (unsigned i = 0; i < peers.size(); ++i) {
+        enet_peer_disconnect_now(peers[i], 0);
+        delete(static_cast<PeerInformation*>(peers[i]->data));
+        peers.erase(peers.begin()+i);
     }
+    this->enet_thread_stop_flag = true;
 }
 
 Stinky::Client::~Client() {

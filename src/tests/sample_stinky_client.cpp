@@ -27,12 +27,15 @@ int main(void) {
     enet_address_set_host(&address, "localhost");
     address.port = 6969;
     Stinky::Client * client = new Stinky::Client(&address, 1, 8, 0);
-
+    client->AttemptConnect();
     while (!WindowShouldClose()) {
         // TODO: Track time epoch instead of multithreaded connection attempts.
-        client->Recv();
         BeginDrawing();
         {
+            client->Recv();
+            if (client->GetPeersSize() == 0) {
+                client->AttemptConnect();
+            }
             rlImGuiBegin();
             ClearBackground(WHITE);
 

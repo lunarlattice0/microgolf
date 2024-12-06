@@ -21,6 +21,7 @@ If running client:
 #include "packettypes.hpp"
 #include <cstring>
 #include <enet/enet.h>
+#include <enet/types.h>
 #include <iostream>
 #include <raylib.h>
 #include <sstream>
@@ -63,7 +64,7 @@ void Stinky::Host::Recv() {
                 char friendlyHostIp[64];
 
                 enet_address_get_host_ip(&event.peer->address, &friendlyHostIp[0], 64);
-                peerMessage << "Peer connecting: " << std::string(friendlyHostIp) << ":" << &event.peer->address.port << std::endl;
+                peerMessage << "Peer connecting: " << std::string(friendlyHostIp) << ":" << event.peer->address.port << std::endl;
                 TraceLog(LOG_INFO, peerMessage.str().c_str());
 
                 // Now we need to send off our public key to the client and await their public key to complete key exchange.
@@ -177,6 +178,14 @@ void Stinky::Host::Recv() {
     return;
 };
 
+ENetPeer * Stinky::Host::GetPeers() {
+    return this->host->peers;
+}
+
+enet_uint8 Stinky::Host::GetPeersSize() {
+    return this->host->connectedPeers;
+}
+
 bool Stinky::Host::InitializeEnetAndCrypto() {
     if (sodium_init() < 0) {
         TraceLog(LOG_ERROR, "Couldn't start libsodium! Bailing out...");
@@ -240,9 +249,14 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
     }
 
     this->serverAddress = serverAddress;
-    ENetPeer * peer = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
-    if (peer == NULL) {
-        TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
-        // TODO: Figure out what to do in case of a failure.
+}
+
+void Stinky::Client::AttemptConnect() {
+    if (server == nullptr) {
+        TraceLog(LOG_INFO, "Trying to connect...");
+        this->server = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
+        if (server == NULL) {
+            TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
+        }
     }
 }

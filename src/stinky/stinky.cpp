@@ -13,21 +13,19 @@ If running server:
 If running client:
 1) Create a Stinky::Client::Client() object
 2) Run Stinky::Client::PrepareConnect(). This attempts to connect to the server.
-3) Run RecvLoop with waitTime of > 0. This will attempt to negotiate a connection with the server.
-4) If RecvLoop returns, timedOut may be true or false.
 5) Call Stinky::Client::Cleanup(). This will disconnect from the server, but you can repeat from step 2 to begin a new session.
 6) Call destructor on Stinky::Client. This will destroy the host object, and is irrecoverable.
 */
 
 #include "stinky/stinky.hpp"
+#include "packettypes.hpp"
 #include <cstring>
 #include <enet/enet.h>
 #include <iostream>
 #include <raylib.h>
-#include <sodium/crypto_secretbox.h>
 #include <sstream>
-#include <vector>
 
+/*
 void Stinky::Host::FormatAndSend(ENetPeer * peer, DataPacket * dp) {
     // PacketType header + data
     PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
@@ -54,57 +52,49 @@ void Stinky::Host::DecryptAndFormat(ENetPeer * peer, unsigned char * packet, Dat
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
     std::memcpy(nonce, packet, crypto_secretbox_NONCEBYTES);
 }
+*/
 
-void Stinky::Server::RecvLoop() {
-    Stinky::Host::RecvLoop(this->host, &this->event, 0);
-}
-
-void Stinky::Client::RecvLoop(unsigned int waitTime) {
-    Stinky::Host::RecvLoop(this->host, &this->event, waitTime);
-}
-// Run me in a seperate thread!
-void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int waitTime) {
-    // TODO: Why does this leak memory?
-    while (enet_host_service(host, event, waitTime) > 0) {
-        switch (event->type) {
+void Stinky::Host::Recv() {
+    while (enet_host_service(this->host, &this->event, 0) > 0) {
+        switch (event.type) {
             case ENET_EVENT_TYPE_CONNECT:
             {
                 std::stringstream peerMessage;
                 char friendlyHostIp[64];
 
-                enet_address_get_host_ip(&event->peer->address, &friendlyHostIp[0], 64);
-                peerMessage << "Peer connecting: " << std::string(friendlyHostIp) << ":" << event->peer->address.port << std::endl;
+                enet_address_get_host_ip(&event.peer->address, &friendlyHostIp[0], 64);
+                peerMessage << "Peer connecting: " << std::string(friendlyHostIp) << ":" << &event.peer->address.port << std::endl;
                 TraceLog(LOG_INFO, peerMessage.str().c_str());
 
                 // Now we need to send off our public key to the client and await their public key to complete key exchange.
                 ENetPacket * packet = enet_packet_create(this->HostKeys->host_pk, crypto_kx_PUBLICKEYBYTES + 1, ENET_PACKET_FLAG_RELIABLE);
 
-                enet_peer_send(event->peer, 0, packet);
+                enet_peer_send(event.peer, 0, packet);
 
                 // Fill out a struct detailing the peer's information
-                event->peer->data = static_cast<void*>(new PeerInformation);
+                event.peer->data = static_cast<void*>(new PeerInformation);
 
                 break;
             }
             case ENET_EVENT_TYPE_RECEIVE:
             {
                 // Check if we're in key-exchange phase.
-                PeerInformation * pi = static_cast<PeerInformation*>(event->peer->data);
+                PeerInformation * pi = static_cast<PeerInformation*>(event.peer->data);
 
                 if (!pi->keyExCompleted) {
                     // Okay, we are, so try to calculate the session key.
 
                     // Make sure the packet received is the same length as the pubkey length.
-                    if (event->packet->dataLength != crypto_kx_PUBLICKEYBYTES + 1) {
+                    if (event.packet->dataLength != crypto_kx_PUBLICKEYBYTES + 1) {
                         // eject the peer immediately.
-                        enet_peer_reset(event->peer);
+                        enet_peer_reset(event.peer);
                         delete(pi);
-                        event->peer->data = NULL;
+                        event.peer->data = NULL;
                         goto destroy_packet;
                     }
 
 
-                    pi->peer_pk = event->packet->data;
+                    pi->peer_pk = event.packet->data;
 
                     if (this->HostKeys->isServer) {
                         if (crypto_kx_server_session_keys(
@@ -119,9 +109,9 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                             badClientMessage << "A client sent a bad public key! Disconnecting." << std::endl;
                             TraceLog(LOG_INFO, badClientMessage.str().c_str());
 
-                            enet_peer_reset(event->peer);
+                            enet_peer_reset(event.peer);
                             delete(pi);
-                            event->peer->data = NULL;
+                            event.peer->data = NULL;
                             goto destroy_packet;
                         }
                     } else {
@@ -138,9 +128,9 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                             badServerMessage << "Server sent a bad public key! Disconnecting." << std::endl;
                             TraceLog(LOG_INFO, badServerMessage.str().c_str());
 
-                            enet_peer_reset(event->peer);
+                            enet_peer_reset(event.peer);
                             delete(pi);
-                            event->peer->data = NULL;
+                            event.peer->data = NULL;
                             goto destroy_packet;
                         }
                     }
@@ -152,8 +142,8 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
 
                     char friendlyHostIp[64];
 
-                    enet_address_get_host_ip(&event->peer->address, &friendlyHostIp[0], 64);
-                    keyExMessage << "Negotiation success for: " << std::string(friendlyHostIp) << ":" << event->peer->address.port << std::endl;
+                    enet_address_get_host_ip(&event.peer->address, &friendlyHostIp[0], 64);
+                    keyExMessage << "Negotiation success for: " << std::string(friendlyHostIp) << ":" << event.peer->address.port << std::endl;
                     TraceLog(LOG_INFO, keyExMessage.str().c_str());
 
 
@@ -161,7 +151,7 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                 // We're NOT in key-exchange phase, so treat data is gamedata
                 // STUB
                 destroy_packet:
-                enet_packet_destroy(event->packet);
+                enet_packet_destroy(event.packet);
                 break;
             }
             case ENET_EVENT_TYPE_DISCONNECT:
@@ -169,18 +159,17 @@ void Stinky::Host::RecvLoop(ENetHost * host, ENetEvent * event, unsigned int wai
                 std::stringstream disconnectMessage;
                 char friendlyHostIp[64];
 
-                enet_address_get_host_ip(&event->peer->address, &friendlyHostIp[0], 64);
+                enet_address_get_host_ip(&event.peer->address, &friendlyHostIp[0], 64);
                 disconnectMessage << "Peer disconnecting: " << std::string(friendlyHostIp) << std::endl;
                 TraceLog(LOG_INFO, disconnectMessage.str().c_str());
-                delete(static_cast<PeerInformation*>(event->peer->data));
+                delete(static_cast<PeerInformation*>(event.peer->data));
 
-                event->peer->data = NULL;
+                event.peer->data = NULL;
                 break;
             }
             case ENET_EVENT_TYPE_NONE:
             {
                 // cool, nothing happened!
-
                 break;
             }
         }
@@ -208,20 +197,23 @@ bool Stinky::Host::InitializeEnetAndCrypto() {
     return true;
 }
 
-void Stinky::Client::PrepareConnect() {
-    ENetPeer * peer = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
-    if (peer == NULL) {
-        TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
-        return;
-    }
-}
-
-
-Stinky::Server::Server(ENetAddress address, enet_uint8 clients, enet_uint8 channels, enet_uint32 bandwidth) {
+Stinky::Host::Host() {
     if (!this->InitializeEnetAndCrypto()) {
         throw std::runtime_error("A subsystem failed to start!");
     }
+}
 
+Stinky::Host::~Host() {
+    for (unsigned i = 0; i < this->host->connectedPeers; ++i) {
+        auto peer = &this->host->peers[i];
+        enet_peer_disconnect_now(peer, 0);
+        delete(static_cast<PeerInformation*>(peer->data));
+    }
+    delete(this->HostKeys);
+    enet_host_destroy(this->host);
+}
+
+Stinky::Server::Server(ENetAddress address, enet_uint8 clients, enet_uint8 channels, enet_uint32 bandwidth) : Stinky::Host::Host() {
     this->HostKeys->isServer = true;
 
     this->host = enet_host_create(&address,
@@ -238,25 +230,7 @@ Stinky::Server::Server(ENetAddress address, enet_uint8 clients, enet_uint8 chann
 
 }
 
-Stinky::Server::~Server() {
-    this->Cleanup();
-    delete(this->HostKeys);
-    enet_host_destroy(this->host);
-}
-
-void Stinky::Server::Cleanup() {
-    for (unsigned i = 0; i < this->host->connectedPeers; ++i) {
-        auto peer = &this->host->peers[i];
-        enet_peer_disconnect_now(peer, 0);
-        delete(static_cast<PeerInformation*>(peer->data));
-    }
-}
-
-Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth) {
-    if (!this->InitializeEnetAndCrypto()) {
-        throw std::runtime_error("A subsystem failed to start!");
-    }
-
+Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth) : Stinky::Host::Host() {
     this->HostKeys->isServer = false;
     this->host = enet_host_create(NULL, outgoing, channels, bandwidth, bandwidth);
 
@@ -266,18 +240,9 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
     }
 
     this->serverAddress = serverAddress;
-
-}
-void Stinky::Client::Cleanup() {
-    for (unsigned i = 0; i < this->host->connectedPeers; ++i) {
-        auto peer = &this->host->peers[i];
-        enet_peer_disconnect_now(peer, 0);
-        delete(static_cast<PeerInformation*>(peer->data));
+    ENetPeer * peer = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
+    if (peer == NULL) {
+        TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
+        // TODO: Figure out what to do in case of a failure.
     }
-}
-
-Stinky::Client::~Client() {
-    this->Cleanup();
-    delete(this->HostKeys);
-    enet_host_destroy(this->host);
 }

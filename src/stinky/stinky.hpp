@@ -2,10 +2,10 @@
 // This acronym sucks.
 #pragma once
 
+#include <enet/types.h>
 #include <raylib.h>
 #include <enet/enet.h>
 #include <sodium.h>
-#include <thread>
 #include "packettypes.hpp"
 
 // Maximum message size in bytes
@@ -14,21 +14,17 @@
 
 namespace Stinky {
     // Check packettypes.hpp for packet type designations.
-    struct DataPacket {
-        PacketType pt;
-        unsigned char data[];
-    };
-
     class Host { // Abstract class that Server and Client derive from.
         public:
-            static void FormatAndSend(ENetPeer * peer, DataPacket * dp);
-            static void DecryptAndFormat(ENetPeer * peer, unsigned char * packet, DataPacket * dp);
+            void Recv();
+            static void FormatAndSend(ENetPeer * peer, PacketType pt, enet_uint32 dataLen, unsigned char * data);
+            static unsigned char * DecryptAndFormat(ENetPacket * dp, ENetPeer * peer, unsigned char * result);
+        protected:
+            Host();
+            ~Host();
 
             // ENetHost container for client and server.
             ENetHost * host;
-
-            // Seperate thread for the enet loop
-            std::thread enet_thread;
 
             // Event variable for Enet
             ENetEvent event;
@@ -57,31 +53,19 @@ namespace Stinky {
             // Intiialize Enet and Libsodium subsystems.
             // Will return true on success, and false on failure. A failure should be considered unrecoverable.
             bool InitializeEnetAndCrypto();
-
-            void RecvLoop(ENetHost * host, ENetEvent * event, unsigned int waitTime);
-
     };
 
     class Server : public Host {
-        private:
         public:
             // Reference is 32 clients, 8 channels, 0 (unlimited) bandwidth
-            void Cleanup();
-            void RecvLoop();
             Server(ENetAddress address, enet_uint8 clients, enet_uint8 channels, enet_uint32 bandwidth);
-            ~Server();
-
     };
 
     class Client : public Host {
         private:
-        public:
             ENetAddress * serverAddress;
-            void PrepareConnect();
-            void Cleanup();
+        public:
             // Reference is 1 outgoing connection, 8 channels, 0 (unlimited) bandwidth
             Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth);
-            ~Client();
-            void RecvLoop(unsigned int waitTime);
     };
 }

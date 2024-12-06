@@ -27,17 +27,10 @@ int main(void) {
     enet_address_set_host(&address, "localhost");
     address.port = 6969;
     Stinky::Client * client = new Stinky::Client(&address, 1, 8, 0);
-    client->PrepareConnect();
 
-    bool exit_flag = false;
-    std::thread connectionAttempt([&client, &exit_flag]{
-        do {
-            client->RecvLoop(100);
-        } while (client->host->connectedPeers == 0 && exit_flag == false);
-        TraceLog(LOG_INFO, "Got connection.");
-    });
     while (!WindowShouldClose()) {
-        client->RecvLoop(0);
+        // TODO: Track time epoch instead of multithreaded connection attempts.
+        client->Recv();
         BeginDrawing();
         {
             rlImGuiBegin();
@@ -48,13 +41,10 @@ int main(void) {
         }
         EndDrawing();
     }
-    exit_flag = true;
-    connectionAttempt.join();
     rlImGuiShutdown();
 
     CloseWindow();
 
-    client->Cleanup();
     delete(client);
 
 

@@ -31,13 +31,12 @@ int main(void) {
     while (!WindowShouldClose()) {
         BeginDrawing();
         {
-            server->RecvLoop();
+            server->Recv();
             rlImGuiBegin();
             ClearBackground(WHITE);
 
             ImGui::Begin("Test");
             if (ImGui::Button("send test packet")) {
-                unsigned char test[8] = {"0123456"};
             }
             ImGui::End();
 
@@ -46,7 +45,6 @@ int main(void) {
         }
         EndDrawing();
     }
-    server->Cleanup();
 
     rlImGuiShutdown();
 

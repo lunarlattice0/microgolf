@@ -2,11 +2,8 @@
 #include "packettypes.hpp"
 #include <cstring>
 #include <enet/enet.h>
-#include <enet/types.h>
 #include <iostream>
 #include <raylib.h>
-#include <sodium/crypto_box.h>
-#include <sodium/crypto_secretbox.h>
 #include <sstream>
 
 
@@ -27,13 +24,16 @@ void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dat
     // datasection is now filled.
 
     // we create a temporary buffer to store nonce and ciphertext
-    unsigned char * ciphertext = new unsigned char[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + dataLen];
 
+    unsigned char * ciphertext = new unsigned char[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + sizeof(pt) + dataLen];
+
+    // copy nonce to front of ciphertext
+    std::memcpy(ciphertext, nonce, crypto_secretbox_NONCEBYTES);
     // now encrypt the datasection, but offset
-    crypto_secretbox_easy(ciphertext + crypto_secretbox_NONCEBYTES, datasection, sizeof(pt)+dataLen, nonce, pi->tx_Sk);
+    crypto_secretbox_easy(ciphertext + crypto_secretbox_NONCEBYTES, datasection, sizeof(PacketType)+dataLen, nonce, pi->tx_Sk);
 
     // send off the packet
-    ENetPacket * enet_packet = enet_packet_create(&ciphertext[0], crypto_secretbox_NONCEBYTES+crypto_secretbox_MACBYTES+dataLen, ENET_PACKET_FLAG_RELIABLE);
+    ENetPacket * enet_packet = enet_packet_create(ciphertext, crypto_secretbox_NONCEBYTES+crypto_secretbox_MACBYTES+sizeof(pt)+dataLen, ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(peer, 0, enet_packet);
 
     // Destroy the stuff on the heap
@@ -44,16 +44,27 @@ void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dat
 }
 
 // Will return packettype
-// ENet will notify of the packet size, so make sure decrypted is properly sized!!!
-/*
-PacketType Stinky::Host::DecryptAndFormat(ENetPeer * peer, unsigned char * received, unsigned char * decrypted) {
+// Use what enet says is the packet size for receivedLen field.
+// decrypted MUST be at least (receivedLen - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType))
+PacketType Stinky::Host::DecryptAndFormat(ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted) {
     PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
+
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
     std::memcpy(nonce, received, crypto_box_NONCEBYTES);
-    unsigned char * ciphertext = new unsigned char[];
-    crypto_secretbox_open_easy(&decrypted, &received, , )
+
+    unsigned char * temp = new unsigned char[receivedLen - crypto_box_NONCEBYTES];
+
+    if (crypto_secretbox_open_easy(temp, received + crypto_box_NONCEBYTES, receivedLen - crypto_box_NONCEBYTES, nonce, pi->rx_Sk) != 0) {
+        return MG_ERROR;
+    } else {
+        PacketType pt;
+        std::memcpy(&pt, temp, sizeof(PacketType));
+        std::memcpy(&decrypted, temp + sizeof(PacketType), receivedLen - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType));
+
+        delete[] temp;
+        return pt;
+    }
 }
-*/
 
 
 void Stinky::Host::Recv() {
@@ -150,8 +161,14 @@ void Stinky::Host::Recv() {
 
                     goto destroy_packet;
                 }
+
                 // We're NOT in key-exchange phase, so treat data is gamedata
-                TraceLog(LOG_INFO, "Got unknown packet.");
+                {
+                unsigned char * thing = new unsigned char [99];
+                PacketType gamePacket = this->DecryptAndFormat(event.peer, event.packet->dataLength, event.packet->data, thing);
+                std::cout << (int)gamePacket << std::endl;
+                delete[] thing;
+                }
 
                 destroy_packet:
                 enet_packet_destroy(event.packet);
@@ -243,6 +260,7 @@ Stinky::Server::Server(ENetAddress address, enet_uint8 clients, enet_uint8 chann
 
 Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth) : Stinky::Host::Host() {
     this->HostKeys->isServer = false;
+    this->server = nullptr;
     this->host = enet_host_create(NULL, outgoing, channels, bandwidth, bandwidth);
 
     if (host == NULL) {
@@ -254,7 +272,7 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
 }
 
 void Stinky::Client::AttemptConnect() {
-    if (server == nullptr) {
+    if (this->server == nullptr) {
         TraceLog(LOG_INFO, "Trying to connect...");
         this->server = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
         if (server == NULL) {

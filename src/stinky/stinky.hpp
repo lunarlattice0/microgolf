@@ -36,7 +36,7 @@ namespace Stinky {
             enet_uint8 GetPeersSize();
             // TODO: Implement and remove static.
             void FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dataLen, unsigned char * data);
-            static unsigned char * DecryptAndFormat(ENetPacket * dp, ENetPeer * peer, unsigned char * result);
+            PacketType DecryptAndFormat(ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted);
         protected:
             Host();
             ~Host();

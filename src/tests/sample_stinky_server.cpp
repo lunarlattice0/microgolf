@@ -36,7 +36,9 @@ int main(void) {
             ClearBackground(WHITE);
 
             ImGui::Begin("Test");
-            if (ImGui::Button("send test packet")) {
+            if (ImGui::Button("send test packet") && server->GetPeersSize() > 0) {
+                unsigned char test[] = "hi";
+                server->FormatAndSend(MG_CHAT, &server->GetPeers()[0], 3, test);
             }
             ImGui::End();
 

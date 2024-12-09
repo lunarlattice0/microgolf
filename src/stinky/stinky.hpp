@@ -1,8 +1,23 @@
 // STateful INternet Kit-Y
 // This acronym sucks.
+
+/*
+Basic setup:
+
+Server:
+1) Create a server object.
+2) Call server's recv from raylib's mainloop.
+3) Call destructor when done.
+
+Client:
+1) Create a server object
+2) Call client recv's from mainloop
+3) Call client's connect function from mainloop, but check if there are no peers first.
+4) Call destructor when done.
+*/
+
 #pragma once
 
-#include <enet/types.h>
 #include <raylib.h>
 #include <enet/enet.h>
 #include <sodium.h>
@@ -20,7 +35,7 @@ namespace Stinky {
             ENetPeer * GetPeers();
             enet_uint8 GetPeersSize();
             // TODO: Implement and remove static.
-            static void FormatAndSend(ENetPeer * peer, PacketType pt, enet_uint32 dataLen, unsigned char * data);
+            void FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dataLen, unsigned char * data);
             static unsigned char * DecryptAndFormat(ENetPacket * dp, ENetPeer * peer, unsigned char * result);
         protected:
             Host();
@@ -72,7 +87,7 @@ namespace Stinky {
             Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth);
             // Try to connect to a remote host.
 
-            // Feel free to spam this, a counter tracks if there is a connection in progress.
+            // While a counter tracks if there is a connection in progress, don't spam this as you will end up wasting cycles.
             void AttemptConnect();
         };
 }

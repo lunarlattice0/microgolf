@@ -1,22 +1,3 @@
-// TODO
-// we are STILL leaking data...
-
-/*
-Workflow:
-
-If running server:
-1) Create a Stinky::Server::Server() object
-2) Tie RecvLoop to the game loop
-3) After finishing, call Stinky::Server::Cleanup(). This disconnects all clients, but you can still call RecvLoop to reaccept clients.
-4) Call destructor on Stinky::Server. This will destroy the host object, and is irrecoverable.
-
-If running client:
-1) Create a Stinky::Client::Client() object
-2) Run Stinky::Client::PrepareConnect(). This attempts to connect to the server.
-5) Call Stinky::Client::Cleanup(). This will disconnect from the server, but you can repeat from step 2 to begin a new session.
-6) Call destructor on Stinky::Client. This will destroy the host object, and is irrecoverable.
-*/
-
 #include "stinky/stinky.hpp"
 #include "packettypes.hpp"
 #include <cstring>
@@ -24,36 +5,56 @@ If running client:
 #include <enet/types.h>
 #include <iostream>
 #include <raylib.h>
+#include <sodium/crypto_box.h>
+#include <sodium/crypto_secretbox.h>
 #include <sstream>
 
-/*
-void Stinky::Host::FormatAndSend(ENetPeer * peer, DataPacket * dp) {
-    // PacketType header + data
+
+void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dataLen, unsigned char * data) {
     PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
+
+    // The data is sent in the following format:
+    // nonce (NONCEBYTES), [packettype(unsignedchar = 8 bits), remaining data]
+    // For convenience sake, the section after the nonce will be referred to as datasection
+
+    // prepare some libsodium stuff
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
-
-    unsigned char packet [sizeof(*dp)];
-    std::memcpy(packet, dp, sizeof(*dp));
-
-    unsigned char ciphertext [crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + sizeof(packet)];
-
     randombytes_buf(nonce, sizeof nonce);
 
-    crypto_secretbox_easy(&ciphertext[crypto_secretbox_NONCEBYTES], &packet[0], sizeof(packet), nonce, pi->tx_Sk);
-    std::memcpy(&ciphertext[0], nonce, crypto_secretbox_NONCEBYTES);
-    ENetPacket * enet_packet = enet_packet_create(&ciphertext[0], sizeof(ciphertext), ENET_PACKET_FLAG_RELIABLE);
+    unsigned char * datasection = new unsigned char[sizeof(pt) + dataLen]();
+    std::memcpy(datasection, &pt, sizeof(pt));
+    std::memcpy(datasection + sizeof(pt), &data, dataLen);
+    // datasection is now filled.
+
+    // we create a temporary buffer to store nonce and ciphertext
+    unsigned char * ciphertext = new unsigned char[crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + dataLen];
+
+    // now encrypt the datasection, but offset
+    crypto_secretbox_easy(ciphertext + crypto_secretbox_NONCEBYTES, datasection, sizeof(pt)+dataLen, nonce, pi->tx_Sk);
+
+    // send off the packet
+    ENetPacket * enet_packet = enet_packet_create(&ciphertext[0], crypto_secretbox_NONCEBYTES+crypto_secretbox_MACBYTES+dataLen, ENET_PACKET_FLAG_RELIABLE);
     enet_peer_send(peer, 0, enet_packet);
 
-    // the packet is formatted as
-    // NONCEBYTES + ciphertext.
+    // Destroy the stuff on the heap
+    delete[] ciphertext;
+    delete[] datasection;
+
+    return;
 }
 
-void Stinky::Host::DecryptAndFormat(ENetPeer * peer, unsigned char * packet, DataPacket * dp) {
+// Will return packettype
+// ENet will notify of the packet size, so make sure decrypted is properly sized!!!
+/*
+PacketType Stinky::Host::DecryptAndFormat(ENetPeer * peer, unsigned char * received, unsigned char * decrypted) {
     PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
-    std::memcpy(nonce, packet, crypto_secretbox_NONCEBYTES);
+    std::memcpy(nonce, received, crypto_box_NONCEBYTES);
+    unsigned char * ciphertext = new unsigned char[];
+    crypto_secretbox_open_easy(&decrypted, &received, , )
 }
 */
+
 
 void Stinky::Host::Recv() {
     while (enet_host_service(this->host, &this->event, 0) > 0) {
@@ -147,10 +148,11 @@ void Stinky::Host::Recv() {
                     keyExMessage << "Negotiation success for: " << std::string(friendlyHostIp) << ":" << event.peer->address.port << std::endl;
                     TraceLog(LOG_INFO, keyExMessage.str().c_str());
 
-
+                    goto destroy_packet;
                 }
                 // We're NOT in key-exchange phase, so treat data is gamedata
-                // STUB
+                TraceLog(LOG_INFO, "Got unknown packet.");
+
                 destroy_packet:
                 enet_packet_destroy(event.packet);
                 break;

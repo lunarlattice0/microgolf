@@ -29,7 +29,7 @@ int main(void) {
     Stinky::Client * client = new Stinky::Client(&address, 1, 8, 0);
     client->AttemptConnect();
     while (!WindowShouldClose()) {
-        // TODO: Track time epoch instead of multithreaded connection attempts.
+        // TODO: Track time with epoch to determine when to stop trying to connect.
         BeginDrawing();
         {
             client->Recv();

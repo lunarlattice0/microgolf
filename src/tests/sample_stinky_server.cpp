@@ -1,13 +1,15 @@
 // TEST FOR BASIC STINKY FUNCTIONALITY
 
 #include <enet/enet.h>
+#include <iostream>
 #include <raylib.h>
 #include "packettypes.hpp"
 #include "stinky/stinky.hpp"
 #include "../vendor/imgui/imgui.h"
 #include "../vendor/imgui/misc/cpp/imgui_stdlib.h"
 #include "../rlImGui.h"
-
+#include <sstream>
+#include <vector>
 
 int main(void) {
     const int screenWidth = 640;
@@ -37,8 +39,9 @@ int main(void) {
 
             ImGui::Begin("Test");
             if (ImGui::Button("send test packet") && server->GetPeersSize() > 0) {
-                unsigned char test[] = "hi";
-                server->FormatAndSend(MG_CHAT, &server->GetPeers()[0], 3, test);
+                std::string test("I am a test message.");
+                unsigned char * test_uc = reinterpret_cast<unsigned char *>(test.data());
+                server->FormatAndSend(MG_CHAT, &server->GetPeers()[0], test.length(), test_uc);
             }
             ImGui::End();
 

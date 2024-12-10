@@ -4,7 +4,9 @@
 #include <enet/enet.h>
 #include <iostream>
 #include <raylib.h>
+#include <sodium/crypto_box.h>
 #include <sstream>
+#include <string>
 
 
 void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dataLen, unsigned char * data) {
@@ -18,9 +20,11 @@ void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dat
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
     randombytes_buf(nonce, sizeof nonce);
 
-    unsigned char * datasection = new unsigned char[sizeof(pt) + dataLen]();
+    unsigned char * datasection = new unsigned char[sizeof(pt) + dataLen];
     std::memcpy(datasection, &pt, sizeof(pt));
-    std::memcpy(datasection + sizeof(pt), &data, dataLen);
+    std::memcpy(datasection + sizeof(pt), data, dataLen);
+
+
     // datasection is now filled.
 
     // we create a temporary buffer to store nonce and ciphertext
@@ -29,6 +33,7 @@ void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dat
 
     // copy nonce to front of ciphertext
     std::memcpy(ciphertext, nonce, crypto_secretbox_NONCEBYTES);
+
     // now encrypt the datasection, but offset
     crypto_secretbox_easy(ciphertext + crypto_secretbox_NONCEBYTES, datasection, sizeof(PacketType)+dataLen, nonce, pi->tx_Sk);
 
@@ -43,7 +48,6 @@ void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dat
     return;
 }
 
-// Will return packettype
 // Use what enet says is the packet size for receivedLen field.
 // decrypted MUST be at least (receivedLen - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType))
 PacketType Stinky::Host::DecryptAndFormat(ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted) {
@@ -52,16 +56,17 @@ PacketType Stinky::Host::DecryptAndFormat(ENetPeer * peer, enet_uint32 receivedL
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
     std::memcpy(nonce, received, crypto_box_NONCEBYTES);
 
-    unsigned char * temp = new unsigned char[receivedLen - crypto_box_NONCEBYTES];
+    unsigned char * datasection = new unsigned char[receivedLen - crypto_box_NONCEBYTES - crypto_box_MACBYTES];
 
-    if (crypto_secretbox_open_easy(temp, received + crypto_box_NONCEBYTES, receivedLen - crypto_box_NONCEBYTES, nonce, pi->rx_Sk) != 0) {
+    if (crypto_secretbox_open_easy(datasection, received + crypto_box_NONCEBYTES, receivedLen - crypto_box_NONCEBYTES, nonce, pi->rx_Sk) != 0) {
         return MG_ERROR;
     } else {
-        PacketType pt;
-        std::memcpy(&pt, temp, sizeof(PacketType));
-        std::memcpy(&decrypted, temp + sizeof(PacketType), receivedLen - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType));
 
-        delete[] temp;
+        PacketType pt;
+        std::memcpy(&pt, datasection, sizeof(PacketType));
+        std::memcpy(decrypted, datasection + sizeof(PacketType), receivedLen - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType));
+
+        delete[] datasection;
         return pt;
     }
 }
@@ -164,10 +169,23 @@ void Stinky::Host::Recv() {
 
                 // We're NOT in key-exchange phase, so treat data is gamedata
                 {
-                unsigned char * thing = new unsigned char [99];
-                PacketType gamePacket = this->DecryptAndFormat(event.peer, event.packet->dataLength, event.packet->data, thing);
-                std::cout << (int)gamePacket << std::endl;
-                delete[] thing;
+                    std::cout << std::endl;
+                    auto gameDataTrueLength = event.packet->dataLength - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType);
+                    unsigned char * gameData = new unsigned char [gameDataTrueLength];
+                    PacketType gamePacketType = this->DecryptAndFormat(event.peer, event.packet->dataLength, event.packet->data, gameData);
+
+                    switch (gamePacketType) {
+                        case MG_ERROR:
+                            {
+                                TraceLog(LOG_ERROR, "Discarding invalid packet.");
+                                break;
+                            }
+                        case MG_CHAT:
+                            {
+                                std::cout << std::string(reinterpret_cast<char *>(gameData)) << std::endl;
+                            }
+                    }
+                    delete[] gameData;
                 }
 
                 destroy_packet:

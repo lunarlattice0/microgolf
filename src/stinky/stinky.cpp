@@ -1,10 +1,10 @@
+// TODO: Fix wrong packet size.
 #include "stinky/stinky.hpp"
 #include "packettypes.hpp"
 #include <cstring>
 #include <enet/enet.h>
 #include <iostream>
 #include <raylib.h>
-#include <sodium/crypto_box.h>
 #include <sstream>
 #include <string>
 

@@ -1,6 +1,6 @@
-[submodule "src/vendor/imgui"]
-	path = src/vendor/imgui
-	url = https://github.com/ocornut/imgui.git
 [submodule "subprojects/luau"]
 	path = subprojects/luau
 	url = https://github.com/luau-lang/luau.git
+[submodule "src/vendor/imgui"]
+	path = src/vendor/imgui
+	url = https://github.com/ocornut/imgui.git

@@ -180,7 +180,7 @@ void Stinky::Host::Recv() {
                                 TraceLog(LOG_ERROR, "Discarding invalid packet.");
                                 break;
                             }
-                        case MG_CHAT:
+                        case MG_TEST:
                             {
                                 std::cout << std::string(reinterpret_cast<char *>(gameData)) << std::endl;
                             }

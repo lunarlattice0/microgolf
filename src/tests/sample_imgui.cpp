@@ -26,7 +26,7 @@ int main(void) {
         BeginDrawing();
         {
             rlImGuiBegin();
-            ClearBackground(WHITE);
+            ClearBackground(BLACK);
 
             SetupGuiStyle();
 

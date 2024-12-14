@@ -1,3 +1,5 @@
+// Call this in raylib loop
+#pragma once
 #include "imgui.h"
 #include "../vendor/imgui/imgui.h"
 
@@ -14,7 +16,7 @@ inline void SetupGuiStyle() {
     style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
     style.Colors[ImGuiCol_WindowBg] = ImVec4(.8f, 0.8f, .8f, 1.0f);
     style.Colors[ImGuiCol_PopupBg] = style.Colors[ImGuiCol_WindowBg];
-    style.Colors[ImGuiCol_Border] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    style.Colors[ImGuiCol_Border] = ImVec4(0.5f, .5f, .5f, 0.750f);
     style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.5f,0.5f,0.5f,1.0f);
     style.Colors[ImGuiCol_FrameBg] = style.Colors[ImGuiCol_ScrollbarBg];
     style.Colors[ImGuiCol_FrameBgHovered] = highIntensityOrange;

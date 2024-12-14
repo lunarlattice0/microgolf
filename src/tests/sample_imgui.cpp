@@ -1,7 +1,7 @@
 // TEST FOR IMGUI
 
 #include <raylib.h>
-
+#include "../gui/style.hpp"
 #include "../vendor/imgui/imgui.h"
 #include "../rlImGui.h"
 
@@ -27,6 +27,8 @@ int main(void) {
         {
             rlImGuiBegin();
             ClearBackground(WHITE);
+
+            SetupGuiStyle();
 
             bool open = true;
             ImGui::ShowDemoWindow(&open);

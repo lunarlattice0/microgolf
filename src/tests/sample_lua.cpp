@@ -12,11 +12,8 @@
 #include <iostream>
 
 #include "gui/imgui_lua.hpp"
+#include "style.hpp"
 
-static int test(lua_State *L) {
-    std::cout << "Called from lua!" << std::endl;
-    return 1;
-}
 int main(void) {
     const int screenWidth = 640;
     const int screenHeight = 480;
@@ -35,25 +32,40 @@ int main(void) {
     lua_State *L = luaL_newstate();
     luaL_openlibs(L);
 
-    lua_pushcfunction(L, test, "testCFunction");
-    lua_setglobal(L, "testCFunction");
+    ImGuiLuaBridge * lb = new ImGuiLuaBridge(L);
 
-    lua_pushcfunction(L, ImGuiLuaBridge::Begin, "ImGuiBegin");
-    lua_setglobal(L, "ImGuiBegin");
-
-    lua_pushcfunction(L, ImGuiLuaBridge::Text, "ImGuiText");
-    lua_setglobal(L, "ImGuiText");
-
-    lua_pushcfunction(L, ImGuiLuaBridge::End, "ImGuiEnd");
-    lua_setglobal(L, "ImGuiEnd");
-
-    lua_pop(L, 1);
-
+    static size_t bytecodeSize = 0;
+    static int runResult = 0;
     while (!WindowShouldClose()) {
         BeginDrawing();
         {
             rlImGuiBegin();
             ClearBackground(WHITE);
+
+            SetupGuiStyle();
+
+            std::string sample =
+            "ImGuiLuaBridge.Begin(\"Text\")"
+            "ImGuiLuaBridge.Text(\"Hi\")"
+            "ImGuiLuaBridge.End()"
+            "ImGuiLuaBridge.Begin(\"Text2\")"
+            "ImGuiLuaBridge.Text(\"Hi\")"
+            "buf = buffer.create(99)"
+            "ImGuiLuaBridge.InputTextMultiline(\"label\", buf)"
+            "ImGuiLuaBridge.End()"
+            ;
+
+            char * bytecode = luau_compile(sample.c_str(), sample.size() + 1, NULL, &bytecodeSize);
+            runResult = luau_load(L, "Test", bytecode, bytecodeSize, 0);
+            free(bytecode);
+            if (runResult == 0) {
+                lua_pcall(L, 0, 0, 0);
+            } else {
+                std::cerr << lua_tostring(L, -1) << std::endl;
+                lua_pop(L,1);
+            }
+
+            /*
             ImGui::Begin("Test");
             static size_t bytecodeSize = 0;
             static std::string luaScript;
@@ -73,19 +85,18 @@ int main(void) {
                     lua_pop(L,1);
                 }
             }
-            /*
-            char * bytecode = luau_compile("ImGuiText(\"i sent this from LUA\")", 18, NULL, &bytecodeSize);
-            runResult = luau_load(L, "test", bytecode, bytecodeSize, 0);
-            free(bytecode);
-            lua_pcall(L, 0, 0, 0);
-            */
+
             ImGui::Text("Check your console for output.");
             ImGui::End();
+            */
+
             rlImGuiEnd();
             DrawText("LUA TEST", 0, 0, 50, BLACK);
         }
         EndDrawing();
     }
+    delete(lb);
+
     rlImGuiShutdown();
 
     CloseWindow();

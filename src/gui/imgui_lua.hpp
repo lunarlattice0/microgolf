@@ -12,8 +12,24 @@
 #include "lua.h"
 #include "imgui.h"
 
-namespace ImGuiLuaBridge {
-    int Begin(lua_State *L);
-    int Text(lua_State *L);
-    int End(lua_State *L);
-}
+class ImGuiLuaBridge {
+    public:
+        ImGuiLuaBridge(lua_State *L);
+    private:
+//        static int Test(lua_State *L);
+        static int Begin(lua_State *L);
+        static int End(lua_State *L);
+        static int Text(lua_State *L);
+        static int Button(lua_State *L);
+        static int InputTextMultiline(lua_State *L);
+
+        constexpr static const luaL_Reg LuaFuncs[] =
+        {
+          {"Begin", Begin},
+          {"End", End},
+          {"Text", Text},
+          {"Button", Button},
+          {"InputTextMultiline", InputTextMultiline},
+          {NULL, NULL}
+        };
+};

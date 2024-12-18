@@ -20,6 +20,7 @@ int ImGuiLuaBridge::Test(lua_State *L) {
 }
 */
 
+// Window title CANNOT be empty.
 int ImGuiLuaBridge::Begin(lua_State *L) {
     auto title = luaL_checkstring(L, -1);
     ImGui::Begin(title);
@@ -48,7 +49,6 @@ int ImGuiLuaBridge::Button(lua_State *L) {
 }
 
 int ImGuiLuaBridge::InputTextMultiline(lua_State *L) {
-    // TODO: Figure out what 'poz means by frame
     // args = label(string), text(buffer), returns buffer
 
     size_t bufferSize = 0;
@@ -56,6 +56,5 @@ int ImGuiLuaBridge::InputTextMultiline(lua_State *L) {
     auto label = luaL_checkstring(L, -2);
     ImGui::InputTextMultiline(label, textBuffer, bufferSize);
 
-    std::cout << bufferSize<< std::endl;
     return 0;
 }

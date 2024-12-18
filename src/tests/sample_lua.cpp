@@ -1,5 +1,6 @@
 // TEST FOR LUA
 
+#include "luahelper/luahelper.hpp"
 #include "luacode.h"
 #include "lualib.h"
 #include "lua.h"
@@ -10,7 +11,8 @@
 #include "../rlImGui.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include <iostream>
-
+#include <fstream>
+#include <sstream>
 #include "gui/imgui_lua.hpp"
 #include "style.hpp"
 
@@ -28,14 +30,17 @@ int main(void) {
     io->IniFilename = NULL;
     io->LogFilename = NULL;
 
-    // oh dear god
-    lua_State *L = luaL_newstate();
-    luaL_openlibs(L);
+    // Set up Lua env
+    LuauHelper * luau = new LuauHelper;
+    std::ifstream preloadFile("../src/gamescripts/sample_lua/preload.lua");
+    std::stringstream preload;
+    preload << preloadFile.rdbuf();
+    luau->CompileAndRun("preload", preload.str().c_str(), preload.str().length() + 1);
 
-    ImGuiLuaBridge * lb = new ImGuiLuaBridge(L);
+    std::ifstream loopFile("../src/gamescripts/sample_lua/loop.lua");
+    std::stringstream loop;
+    loop << loopFile.rdbuf();
 
-    static size_t bytecodeSize = 0;
-    static int runResult = 0;
     while (!WindowShouldClose()) {
         BeginDrawing();
         {
@@ -43,63 +48,15 @@ int main(void) {
             ClearBackground(WHITE);
 
             SetupGuiStyle();
-
-            std::string sample =
-            "ImGuiLuaBridge.Begin(\"Text\")"
-            "ImGuiLuaBridge.Text(\"Hi\")"
-            "ImGuiLuaBridge.End()"
-            "ImGuiLuaBridge.Begin(\"Text2\")"
-            "ImGuiLuaBridge.Text(\"Hi\")"
-            "buf = buffer.create(99)"
-            "ImGuiLuaBridge.InputTextMultiline(\"label\", buf)"
-            "ImGuiLuaBridge.End()"
-            ;
-
-            char * bytecode = luau_compile(sample.c_str(), sample.size() + 1, NULL, &bytecodeSize);
-            runResult = luau_load(L, "Test", bytecode, bytecodeSize, 0);
-            free(bytecode);
-            if (runResult == 0) {
-                lua_pcall(L, 0, 0, 0);
-            } else {
-                std::cerr << lua_tostring(L, -1) << std::endl;
-                lua_pop(L,1);
-            }
-
-            /*
-            ImGui::Begin("Test");
-            static size_t bytecodeSize = 0;
-            static std::string luaScript;
-            static int runResult = 0;
-            ImGui::Text("Lua Script:");
-            static ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
-            ImGui::InputTextMultiline("##", &luaScript, ImVec2(ImGui::GetWindowSize().x - 16, 256), flags, NULL, NULL);
-
-            if (ImGui::Button("Compile Bytecode")) {
-                char* bytecode = luau_compile(luaScript.c_str(), luaScript.size() + 1, NULL, &bytecodeSize);
-                runResult = luau_load(L, "test", bytecode, bytecodeSize, 0);
-                free(bytecode);
-                if (runResult == 0) {
-                    lua_pcall(L, 0, 0, 0);
-                } else {
-                    std::cerr << lua_tostring(L, -1) << std::endl;
-                    lua_pop(L,1);
-                }
-            }
-
-            ImGui::Text("Check your console for output.");
-            ImGui::End();
-            */
+            luau->CompileAndRun("loop", loop.str().c_str(), loop.str().length() + 1);
 
             rlImGuiEnd();
             DrawText("LUA TEST", 0, 0, 50, BLACK);
         }
         EndDrawing();
     }
-    delete(lb);
-
+    delete(luau);
     rlImGuiShutdown();
-
     CloseWindow();
-    lua_close(L);
     return 0;
 }

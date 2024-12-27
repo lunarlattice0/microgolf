@@ -1,4 +1,4 @@
-// TODO: Fix wrong packet size.
+// TODO: When connecting two clients, disconnecting the first client causes the second client's peer to be mangled (but not corrupted). Why?
 #include "stinky/stinky.hpp"
 #include "packettypes.hpp"
 #include <cstring>
@@ -9,7 +9,7 @@
 #include <string>
 
 
-void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dataLen, unsigned char * data) {
+void Stinky::Host::FormatAndSend(PacketType pt, const ENetPeer * peer, enet_uint32 dataLen, unsigned char * data) {
     PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
 
     // The data is sent in the following format:
@@ -39,7 +39,7 @@ void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dat
 
     // send off the packet
     ENetPacket * enet_packet = enet_packet_create(ciphertext, crypto_secretbox_NONCEBYTES+crypto_secretbox_MACBYTES+sizeof(pt)+dataLen, ENET_PACKET_FLAG_RELIABLE);
-    enet_peer_send(peer, 0, enet_packet);
+    enet_peer_send(const_cast<ENetPeer *>(peer), 0, enet_packet);
 
     // Destroy the stuff on the heap
     delete[] ciphertext;
@@ -50,7 +50,7 @@ void Stinky::Host::FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dat
 
 // Use what enet says is the packet size for receivedLen field.
 // decrypted MUST be at least (receivedLen - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType))
-PacketType Stinky::Host::DecryptAndFormat(ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted) {
+PacketType Stinky::Host::DecryptAndFormat(const ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted) {
     PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
 
     unsigned char nonce[crypto_secretbox_NONCEBYTES];
@@ -167,7 +167,7 @@ void Stinky::Host::Recv() {
                     goto destroy_packet;
                 }
 
-                // We're NOT in key-exchange phase, so treat data is gamedata
+                // We're NOT in key-exchange phase, so treat data as gamedata
                 {
                     std::cout << std::endl;
                     auto gameDataTrueLength = event.packet->dataLength - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType);
@@ -194,15 +194,18 @@ void Stinky::Host::Recv() {
             }
             case ENET_EVENT_TYPE_DISCONNECT:
             {
+                // NOTE: only event.peer->data is valid! everything else is invalid in the peer.
                 std::stringstream disconnectMessage;
                 char friendlyHostIp[64];
 
                 enet_address_get_host_ip(&event.peer->address, &friendlyHostIp[0], 64);
                 disconnectMessage << "Peer disconnecting: " << std::string(friendlyHostIp) << std::endl;
+                //std::cout << this->GetPeersSize() << std::endl;
                 TraceLog(LOG_INFO, disconnectMessage.str().c_str());
                 delete(static_cast<PeerInformation*>(event.peer->data));
 
                 event.peer->data = NULL;
+                enet_peer_reset(event.peer);
                 break;
             }
             case ENET_EVENT_TYPE_NONE:
@@ -215,11 +218,11 @@ void Stinky::Host::Recv() {
     return;
 };
 
-ENetPeer * Stinky::Host::GetPeers() {
+const ENetPeer * Stinky::Host::GetPeers() {
     return this->host->peers;
 }
 
-enet_uint8 Stinky::Host::GetPeersSize() {
+unsigned int Stinky::Host::GetPeersSize() {
     return this->host->connectedPeers;
 }
 

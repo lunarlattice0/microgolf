@@ -5,6 +5,7 @@
 #include "stinky/stinky.hpp"
 #include "../vendor/imgui/imgui.h"
 #include "../rlImGui.h"
+#include <iostream>
 
 int main(void) {
     const int screenWidth = 640;
@@ -18,10 +19,6 @@ int main(void) {
     ImGuiIO* io = &ImGui::GetIO();
     io->IniFilename = NULL;
     io->LogFilename = NULL;
-
-    ENetAddress adr;
-    adr.host = ENET_HOST_ANY;
-    adr.port = 6969;
 
     ENetAddress address;
     enet_address_set_host(&address, "localhost");
@@ -38,6 +35,16 @@ int main(void) {
             }
             rlImGuiBegin();
             ClearBackground(WHITE);
+            ImGui::Begin("Test");
+            if (ImGui::Button("send test packet") && client->GetPeersSize() > 0) {
+                std::string test("I am a test message.");
+                unsigned char * test_uc = reinterpret_cast<unsigned char *>(test.data());
+                for (unsigned int i = 0 ; i < client->GetPeersSize(); ++i) {
+                    std::cout << client->GetPeers()[i].connectID << std::endl;
+                    client->FormatAndSend(MG_TEST, &client->GetPeers()[i], test.length() + 1, test_uc);
+                }
+            }
+            ImGui::End();
 
             rlImGuiEnd();
             DrawText("STINKY CLIENT", 0, 0, 50, BLACK);

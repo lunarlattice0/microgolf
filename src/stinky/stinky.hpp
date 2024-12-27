@@ -32,11 +32,11 @@ namespace Stinky {
     class Host { // Abstract class that Server and Client derive from.
         public:
             void Recv();
-            ENetPeer * GetPeers();
-            enet_uint8 GetPeersSize();
+            const ENetPeer * GetPeers();
+            unsigned int GetPeersSize();
             // TODO: Implement and remove static.
-            void FormatAndSend(PacketType pt, ENetPeer * peer, enet_uint32 dataLen, unsigned char * data);
-            PacketType DecryptAndFormat(ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted);
+            void FormatAndSend(PacketType pt, const ENetPeer * peer, enet_uint32 dataLen, unsigned char * data);
+            PacketType DecryptAndFormat(const ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted);
         protected:
             Host();
             ~Host();

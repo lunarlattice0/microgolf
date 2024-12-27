@@ -41,7 +41,11 @@ int main(void) {
             if (ImGui::Button("send test packet") && server->GetPeersSize() > 0) {
                 std::string test("I am a test message.");
                 unsigned char * test_uc = reinterpret_cast<unsigned char *>(test.data());
-                server->FormatAndSend(MG_TEST, &server->GetPeers()[0], test.length() + 1, test_uc);
+                for (unsigned int i = 0 ; i < server->GetPeersSize(); ++i) {
+                    std::cout << server->GetPeersSize() << std::endl;
+                    std::cout << server->GetPeers()[i].connectID << std::endl;
+                    //server->FormatAndSend(MG_TEST, &server->GetPeers()[i], test.length() + 1, test_uc);
+                }
             }
             ImGui::End();
 

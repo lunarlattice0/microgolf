@@ -1,13 +1,59 @@
 // TODO: When connecting two clients, disconnecting the first client causes the second client's peer to be mangled (but not corrupted). Why?
 #include "stinky/stinky.hpp"
 #include "packettypes.hpp"
+#include <cereal/details/helpers.hpp>
+#include <cstdint>
 #include <cstring>
 #include <enet/enet.h>
 #include <iostream>
 #include <raylib.h>
+#include <sodium/randombytes.h>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/archives/binary.hpp>
 #include <sstream>
 #include <string>
 
+uint32_t Stinky::Host::GetPlayerId() {
+    return this->playerId;
+}
+
+const std::unordered_map<uint32_t, Stinky::Host::PlayerInformation> Stinky::Host::GetPlayersMap() {
+    return this->connectedPlayers;
+}
+const std::vector<Stinky::Host::PlayerInformation> Stinky::Host::GetPlayersVector() {
+    std::vector<PlayerInformation> vec;
+    for (auto it : this->GetPlayersMap()) {
+        vec.push_back(it.second);
+    }
+    return vec;
+}
+
+void Stinky::Host::sendPlayers() {
+    if (this->HostKeys->isServer) {
+        std::stringstream ss;
+        {
+            cereal::JSONOutputArchive oarchive(ss);
+            oarchive(this->connectedPlayers);
+        }
+        for (auto it : this->connectedPeers) {
+            this->FormatAndSend(MG_PLAYERLIST, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
+        }
+        return;
+    }
+}
+
+void Stinky::Host::receivePlayers(unsigned char * gameData) {
+    if (!this->HostKeys->isServer) {
+        std::string gd(reinterpret_cast<char *>(gameData));
+        std::stringstream ss(gd);
+        {
+            cereal::JSONInputArchive iarchive(ss);
+            iarchive(this->connectedPlayers);
+        }
+    }
+    return;
+}
 
 void Stinky::Host::FormatAndSend(PacketType pt, const ENetPeer * peer, enet_uint32 dataLen, unsigned char * data) {
     PeerInformation * pi = static_cast<PeerInformation *>(peer->data);
@@ -164,12 +210,17 @@ void Stinky::Host::Recv() {
                     keyExMessage << "Negotiation success for: " << std::string(friendlyHostIp) << ":" << event.peer->address.port << std::endl;
                     TraceLog(LOG_INFO, keyExMessage.str().c_str());
 
+                    // Track this peer.
+                    pi->player.id = randombytes_random();
+                    this->connectedPeers[pi->player.id] = event.peer;
+                    connectedPlayers[pi->player.id] = pi->player;
+                    // Server only: Send playerlist to everyone on new player join.
+                    sendPlayers();
                     goto destroy_packet;
                 }
 
                 // We're NOT in key-exchange phase, so treat data as gamedata
                 {
-                    std::cout << std::endl;
                     auto gameDataTrueLength = event.packet->dataLength - crypto_box_NONCEBYTES - crypto_box_MACBYTES - sizeof(PacketType);
                     unsigned char * gameData = new unsigned char [gameDataTrueLength];
                     PacketType gamePacketType = this->DecryptAndFormat(event.peer, event.packet->dataLength, event.packet->data, gameData);
@@ -180,9 +231,35 @@ void Stinky::Host::Recv() {
                                 TraceLog(LOG_ERROR, "Discarding invalid packet.");
                                 break;
                             }
+
                         case MG_TEST:
                             {
                                 std::cout << std::string(reinterpret_cast<char *>(gameData)) << std::endl;
+                                break;
+                            }
+
+                        case MG_WHOAMI:
+                            {
+                                std::stringstream ss;
+                                if (this->HostKeys->isServer) {
+                                    uint32_t id = pi->player.id;
+                                    {
+                                        cereal::BinaryOutputArchive oarchive(ss);
+                                        oarchive(id);
+                                    }
+                                    this->FormatAndSend(MG_WHOAMI, event.peer, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
+                                } else {
+                                   {
+                                       cereal::BinaryInputArchive iarchive(ss);
+                                       iarchive(this->playerId);
+                                   }
+                                }
+                                break;
+                            }
+                        case MG_PLAYERLIST:
+                            {
+                                receivePlayers(gameData);
+                                break;
                             }
                     }
                     delete[] gameData;
@@ -194,13 +271,19 @@ void Stinky::Host::Recv() {
             }
             case ENET_EVENT_TYPE_DISCONNECT:
             {
+                // Remove peer from known list
+                this->connectedPeers.erase(static_cast<PeerInformation*>(event.peer->data)->player.id);
+                // Remove player from known list
+                this->connectedPlayers.erase(static_cast<PeerInformation*>(event.peer->data)->player.id);
+                // Server-only: Let everyone know
+                sendPlayers();
+
                 // NOTE: only event.peer->data is valid! everything else is invalid in the peer.
                 std::stringstream disconnectMessage;
                 char friendlyHostIp[64];
 
                 enet_address_get_host_ip(&event.peer->address, &friendlyHostIp[0], 64);
                 disconnectMessage << "Peer disconnecting: " << std::string(friendlyHostIp) << std::endl;
-                //std::cout << this->GetPeersSize() << std::endl;
                 TraceLog(LOG_INFO, disconnectMessage.str().c_str());
                 delete(static_cast<PeerInformation*>(event.peer->data));
 
@@ -218,12 +301,20 @@ void Stinky::Host::Recv() {
     return;
 };
 
-const ENetPeer * Stinky::Host::GetPeers() {
-    return this->host->peers;
+const std::unordered_map<uint32_t, ENetPeer*> Stinky::Host::GetPeersMap() {
+    return this->connectedPeers;
 }
 
-unsigned int Stinky::Host::GetPeersSize() {
-    return this->host->connectedPeers;
+const std::vector<ENetPeer*> Stinky::Host::GetPeersVector() {
+    std::vector<ENetPeer*> vec;
+    for (auto it : this->GetPeersMap()) {
+        vec.push_back(it.second);
+    }
+    return vec;
+}
+
+ENetPeer * Stinky::Host::FindPeerFromId(uint32_t id) {
+    return this->connectedPeers[id];
 }
 
 bool Stinky::Host::InitializeEnetAndCrypto() {

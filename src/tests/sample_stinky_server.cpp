@@ -2,6 +2,7 @@
 
 #include <enet/enet.h>
 #include <iostream>
+#include <iterator>
 #include <raylib.h>
 #include "packettypes.hpp"
 #include "stinky/stinky.hpp"
@@ -9,6 +10,7 @@
 #include "../vendor/imgui/misc/cpp/imgui_stdlib.h"
 #include "../rlImGui.h"
 #include <sstream>
+#include <string>
 #include <vector>
 
 int main(void) {
@@ -38,15 +40,23 @@ int main(void) {
             ClearBackground(WHITE);
 
             ImGui::Begin("Test");
-            if (ImGui::Button("send test packet") && server->GetPeersSize() > 0) {
+            if (ImGui::Button("send test packet") && server->GetPeersVector().size() > 0) {
                 std::string test("I am a test message.");
                 unsigned char * test_uc = reinterpret_cast<unsigned char *>(test.data());
-                for (unsigned int i = 0 ; i < server->GetPeersSize(); ++i) {
-                    std::cout << server->GetPeersSize() << std::endl;
-                    std::cout << server->GetPeers()[i].connectID << std::endl;
-                    //server->FormatAndSend(MG_TEST, &server->GetPeers()[i], test.length() + 1, test_uc);
+                for (unsigned int i = 0 ; i < server->GetPeersVector().size(); ++i) {
+                    server->FormatAndSend(MG_TEST, server->GetPeersVector()[i], test.length() + 1, test_uc);
                 }
             }
+            ImGui::End();
+
+            ImGui::Begin("Players");
+            ImGui::Text("my id is %s", std::to_string(server->GetPlayerId()).c_str());
+            auto players = server->GetPlayersVector();
+            std::vector<std::string> playerIds;
+            for (auto it : players) {
+                playerIds.push_back(std::to_string(it.id));
+            }
+            // imgui list of ids here
             ImGui::End();
 
             rlImGuiEnd();

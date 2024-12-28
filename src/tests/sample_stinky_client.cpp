@@ -30,21 +30,21 @@ int main(void) {
         BeginDrawing();
         {
             client->Recv();
-            if (client->GetPeersSize() == 0) {
+            if (client->GetPeersVector().size() == 0) {
                 client->AttemptConnect();
             }
             rlImGuiBegin();
             ClearBackground(WHITE);
             ImGui::Begin("Test");
-            if (ImGui::Button("send test packet") && client->GetPeersSize() > 0) {
+            if (ImGui::Button("send test packet") && client->GetPeersVector().size() > 0) {
                 std::string test("I am a test message.");
                 unsigned char * test_uc = reinterpret_cast<unsigned char *>(test.data());
-                for (unsigned int i = 0 ; i < client->GetPeersSize(); ++i) {
-                    std::cout << client->GetPeers()[i].connectID << std::endl;
-                    client->FormatAndSend(MG_TEST, &client->GetPeers()[i], test.length() + 1, test_uc);
+                for (unsigned int i = 0 ; i < client->GetPeersVector().size(); ++i) {
+                    client->FormatAndSend(MG_TEST, client->GetPeersVector()[i], test.length() + 1, test_uc);
                 }
             }
             ImGui::End();
+
 
             rlImGuiEnd();
             DrawText("STINKY CLIENT", 0, 0, 50, BLACK);

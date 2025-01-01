@@ -10,7 +10,7 @@
 LuauHelper::LuauHelper() {
     this->L = luaL_newstate();
     luaL_openlibs(this->L);
-    this->lb = new ImGuiLuaBridge(L);
+//    this->lb = new ImGuiLuaBridge(L);
     lua_pushcfunction(L, CompileAndRun, "CRS");
     lua_setglobal(L, "CompileAndRun");
 }
@@ -43,6 +43,6 @@ int LuauHelper::CompileAndRun(lua_State *L) {
 }
 
 LuauHelper::~LuauHelper() {
-    delete(lb);
+//    delete(lb);
     lua_close(this->L);
 }

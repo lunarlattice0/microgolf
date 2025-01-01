@@ -39,6 +39,10 @@ void Stinky::Host::sendPlayers() {
         for (auto it : this->connectedPeers) {
             this->FormatAndSend(MG_PLAYERLIST, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
         }
+        for (auto it : this->connectedPeers) {
+            std::string id = std::to_string(it.first);
+            this->FormatAndSend(MG_WHOAMI, it.second, id.length() + 1, reinterpret_cast<unsigned char *>(id.data()));
+        }
         return;
     }
 }
@@ -211,9 +215,12 @@ void Stinky::Host::Recv() {
                     TraceLog(LOG_INFO, keyExMessage.str().c_str());
 
                     // Track this peer.
-                    pi->player.id = randombytes_random();
-                    this->connectedPeers[pi->player.id] = event.peer;
-                    connectedPlayers[pi->player.id] = pi->player;
+                    pi->id = randombytes_random();
+                    this->connectedPeers[pi->id] = event.peer;
+                    connectedPlayers[pi->id] = PlayerInformation{
+                        .id = pi->id,
+                        .nickname = "unnamed",
+                    };
                     // Server only: Send playerlist to everyone on new player join.
                     sendPlayers();
                     goto destroy_packet;
@@ -240,26 +247,32 @@ void Stinky::Host::Recv() {
 
                         case MG_WHOAMI:
                             {
-                                std::stringstream ss;
-                                if (this->HostKeys->isServer) {
-                                    uint32_t id = pi->player.id;
-                                    {
-                                        cereal::BinaryOutputArchive oarchive(ss);
-                                        oarchive(id);
-                                    }
-                                    this->FormatAndSend(MG_WHOAMI, event.peer, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
-                                } else {
-                                   {
-                                       cereal::BinaryInputArchive iarchive(ss);
-                                       iarchive(this->playerId);
-                                   }
-                                }
+                                auto playerIdStr = reinterpret_cast<char *>(gameData);
+                                this->playerId = static_cast<uint32_t>(std::stoul(playerIdStr));
                                 break;
                             }
                         case MG_PLAYERLIST:
                             {
                                 receivePlayers(gameData);
                                 break;
+                            }
+                        case MG_NICKNAME_CHANGE: // for server use
+                            {
+                                if (HostKeys->isServer) {
+                                    char buf[32];
+                                    if (gameDataTrueLength > 32) { // concatenate name
+                                        std::memcpy(buf, gameData, 31);
+                                        buf[31] = '\0'; // make sure the last char is null termed
+                                    } else {
+                                        std::memcpy(buf, gameData, gameDataTrueLength); // bytes 0 -30 are nickname
+                                        buf[gameDataTrueLength - 1] = '\0'; // make sure the last char is null termed
+                                    }
+
+                                    this->connectedPlayers[pi->id].nickname = std::string(buf);
+                                    TraceLog(LOG_INFO, "Set nickname for %zu to %s", pi->id, this->connectedPlayers[pi->id].nickname.c_str());
+                                    sendPlayers();
+                                    break;
+                                }
                             }
                     }
                     delete[] gameData;
@@ -271,10 +284,14 @@ void Stinky::Host::Recv() {
             }
             case ENET_EVENT_TYPE_DISCONNECT:
             {
+                if (!this->HostKeys->isServer && this->GetPeersVector().size() == 0) { // handles client connection timeout
+                    this->retrySafe = true;
+                    break;
+                }
                 // Remove peer from known list
-                this->connectedPeers.erase(static_cast<PeerInformation*>(event.peer->data)->player.id);
+                this->connectedPeers.erase(static_cast<PeerInformation*>(event.peer->data)->id);
                 // Remove player from known list
-                this->connectedPlayers.erase(static_cast<PeerInformation*>(event.peer->data)->player.id);
+                this->connectedPlayers.erase(static_cast<PeerInformation*>(event.peer->data)->id);
                 // Server-only: Let everyone know
                 sendPlayers();
 
@@ -384,11 +401,9 @@ Stinky::Client::Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_ui
 }
 
 void Stinky::Client::AttemptConnect() {
-    if (this->server == nullptr) {
-        TraceLog(LOG_INFO, "Trying to connect...");
+    if (this->retrySafe == true) {
+        retrySafe = false;
+        TraceLog(LOG_INFO, "Starting new connection...");
         this->server = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
-        if (server == NULL) {
-            TraceLog(LOG_INFO, "A connection couldn't be made to the server!");
-        }
     }
 }

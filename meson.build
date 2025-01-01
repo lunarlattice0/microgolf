@@ -29,7 +29,7 @@ microgolf_deps = [
 microgolf_source_files = [
     'src/rlImGui.cpp',
     'src/main.cpp',
-    'src/gui/imgui_lua.cpp',
+#    'src/gui/imgui_lua.cpp',
     'src/stinky/stinky.cpp',
     'src/luahelper/luahelper.cpp',
 ]
@@ -77,10 +77,11 @@ sample_stinky_client_source_files = [
 sample_stinky_client = executable('sample_stinky_client', ['src/rlImGui.cpp', sample_stinky_client_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
 test('sample_stinky_client', sample_stinky_client)
 
-sample_lua_source_files = [
-    'src/tests/sample_lua.cpp',
-    'src/gui/imgui_lua.cpp',
-    'src/luahelper/luahelper.cpp',
-]
-sample_lua = executable('sample_lua', ['src/rlImGui.cpp', sample_lua_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
-test('sample_lua', sample_lua)
+
+#sample_lua_source_files = [
+#    'src/tests/sample_lua.cpp',
+#    'src/gui/imgui_lua.cpp',
+#    'src/luahelper/luahelper.cpp',
+#]
+#sample_lua = executable('sample_lua', ['src/rlImGui.cpp', sample_lua_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
+#test('sample_lua', sample_lua)

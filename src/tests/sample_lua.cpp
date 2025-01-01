@@ -1,4 +1,4 @@
-// TEST FOR LUA
+// DON'T RUN THIS!
 
 #include "luahelper/luahelper.hpp"
 #include "luacode.h"
@@ -13,7 +13,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include "gui/imgui_lua.hpp"
+//#include "gui/imgui_lua.hpp"
 #include "style.hpp"
 
 int main(void) {
@@ -32,14 +32,14 @@ int main(void) {
 
     // Set up Lua env
     LuauHelper * luau = new LuauHelper;
-    std::ifstream preloadFile("../src/gamescripts/sample_lua/preload.lua");
-    std::stringstream preload;
-    preload << preloadFile.rdbuf();
-    luau->CompileAndRun("preload", preload.str().c_str(), preload.str().length() + 1);
+//    std::ifstream preloadFile("../src/gamescripts/sample_lua/preload.lua");
+//    std::stringstream preload;
+//    preload << preloadFile.rdbuf();
+//    luau->CompileAndRun("preload", preload.str().c_str(), preload.str().length() + 1);
 
-    std::ifstream loopFile("../src/gamescripts/sample_lua/loop.lua");
-    std::stringstream loop;
-    loop << loopFile.rdbuf();
+//    std::ifstream loopFile("../src/gamescripts/sample_lua/loop.lua");
+//    std::stringstream loop;
+//    loop << loopFile.rdbuf();
 
     while (!WindowShouldClose()) {
         BeginDrawing();
@@ -48,7 +48,7 @@ int main(void) {
             ClearBackground(WHITE);
 
             SetupGuiStyle();
-            luau->CompileAndRun("loop", loop.str().c_str(), loop.str().length() + 1);
+//            luau->CompileAndRun("loop", loop.str().c_str(), loop.str().length() + 1);
 
             rlImGuiEnd();
             DrawText("LUA TEST", 0, 0, 50, BLACK);

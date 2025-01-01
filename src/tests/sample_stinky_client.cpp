@@ -1,11 +1,13 @@
 // TEST FOR BASIC STINKY FUNCTIONALITY
 
 #include <enet/enet.h>
-#include <raylib.h>
-#include "stinky/stinky.hpp"
-#include "../vendor/imgui/imgui.h"
-#include "../rlImGui.h"
 #include <iostream>
+#include <raylib.h>
+#include "packettypes.hpp"
+#include "vendor/imgui/imgui.h"
+#include "vendor/imgui/misc/cpp/imgui_stdlib.h"
+#include "stinky/stinky.hpp"
+#include "../rlImGui.h"
 
 int main(void) {
     const int screenWidth = 640;
@@ -29,25 +31,55 @@ int main(void) {
         // TODO: Track time with epoch to determine when to stop trying to connect.
         BeginDrawing();
         {
+            rlImGuiBegin();
+            ClearBackground(WHITE);
+
             client->Recv();
             if (client->GetPeersVector().size() == 0) {
                 client->AttemptConnect();
-            }
-            rlImGuiBegin();
-            ClearBackground(WHITE);
-            ImGui::Begin("Test");
-            if (ImGui::Button("send test packet") && client->GetPeersVector().size() > 0) {
-                std::string test("I am a test message.");
-                unsigned char * test_uc = reinterpret_cast<unsigned char *>(test.data());
-                for (unsigned int i = 0 ; i < client->GetPeersVector().size(); ++i) {
-                    client->FormatAndSend(MG_TEST, client->GetPeersVector()[i], test.length() + 1, test_uc);
-                }
-            }
-            ImGui::End();
+            } else {
+            ImGui::Begin("Social");
+            auto localPlayer = client->GetPlayersMap().at(client->GetPlayerId());
+            ImGui::Text("%s [%u]", localPlayer.nickname.c_str(), client->GetPlayerId());
+            if (ImGui::BeginTabBar("Social")) {
+                if (ImGui::BeginTabItem("Players")) {
 
+                    std::vector<std::string> playerListBoxVector;
+
+                    for (auto item : client->GetPlayersMap()) {
+                        playerListBoxVector.push_back(item.second.nickname);
+                    }
+
+                    static int playerlistbox_itemcurrent = 0;
+                    ImGui::ListBox("##playerlistbox", &playerlistbox_itemcurrent,
+                        [](void * data, int n, const char ** out_text)->bool {
+                            const std::vector<std::string>* v = static_cast<std::vector<std::string>*>(data);
+                            *out_text = v->at(n).c_str();
+                            return true;
+                        },
+                        &playerListBoxVector,
+                        playerListBoxVector.size()
+                    );
+
+                    static char nick[32] = "unnamed";
+                    ImGui::InputText("##inputtext", nick, 31);
+                    nick[31] = '\0';
+                    if (ImGui::Button("Change Nickname")) {
+                        client->FormatAndSend(MG_NICKNAME_CHANGE, client->GetPeersVector()[0], 32, reinterpret_cast<unsigned char *>(nick));
+                    }
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("Chat")) {
+                    ImGui::Text("Test");
+                    ImGui::EndTabItem();
+                }
+                ImGui::EndTabBar();
+            }
+                ImGui::End();
+            }
 
             rlImGuiEnd();
-            DrawText("STINKY CLIENT", 0, 0, 50, BLACK);
+            DrawText("chat client test", 0, 0, 50, BLACK);
         }
         EndDrawing();
     }
@@ -56,7 +88,6 @@ int main(void) {
     CloseWindow();
 
     delete(client);
-
 
     return 0;
 }

@@ -57,6 +57,7 @@ namespace Stinky {
             ENetPeer * FindPeerFromId(uint32_t id);
             uint32_t GetPlayerId();
         protected:
+            bool retrySafe = true;
             Host();
             ~Host();
 
@@ -74,7 +75,7 @@ namespace Stinky {
                 unsigned char rx_Sk[crypto_kx_SESSIONKEYBYTES];
                 unsigned char tx_Sk[crypto_kx_SESSIONKEYBYTES];
 
-                PlayerInformation player = PlayerInformation{};
+                uint32_t id = 0;
             };
 
             struct Keys {
@@ -115,12 +116,12 @@ namespace Stinky {
         private:
             ENetAddress * serverAddress;
             ENetPeer * server;
+            uint32_t myId;
         public:
             // Reference is 1 outgoing connection, 8 channels, 0 (unlimited) bandwidth
             Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth);
             // Try to connect to a remote host.
 
-            // While a counter tracks if there is a connection in progress, don't spam this as you will end up wasting cycles.
             void AttemptConnect();
         };
 }

@@ -2,7 +2,7 @@
 
 #pragma once
 #include "lua.h"
-#include "imgui_lua.hpp"
+//#include "imgui_lua.hpp"
 
 class LuauHelper {
     public:
@@ -12,5 +12,5 @@ class LuauHelper {
         ~LuauHelper();
     private:
         lua_State *L;
-        ImGuiLuaBridge * lb;
+//        ImGuiLuaBridge * lb;
 };

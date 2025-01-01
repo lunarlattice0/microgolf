@@ -1,6 +1,7 @@
 --Declare variables pre-loop in this file.
-buf = buffer.create(99)
+--buf = buffer.create(99)
 
+--[[
 function InLoop()
     ImGuiLuaBridge.Begin("Test")
     ImGuiLuaBridge.InputTextMultiline("TestBuffer", buf)
@@ -11,3 +12,4 @@ function InLoop()
     end
     ImGuiLuaBridge.End()
 end
+--]]

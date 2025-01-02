@@ -38,6 +38,14 @@ Client:
 namespace Stinky {
     class Host { // Abstract class that Server and Client derive from.
         public:
+            struct Message {
+                char lastChatMessage[256];
+                uint32_t lastChatMessageSource = 0;
+                template<class Archive> void serialize(Archive & archive) {
+                    archive(lastChatMessage, lastChatMessageSource);
+                }
+            };
+            const std::vector<Message> GetMessageVector();
             struct PlayerInformation {
                 uint32_t id = 0;
                 std::string nickname = "unnamed";
@@ -104,6 +112,7 @@ namespace Stinky {
             void receivePlayers(unsigned char *); // Update internal list of players.
             //
             uint32_t playerId = 0; // 0 on servers.
+            std::vector<Message> Messages; // used by client to retrieve using imgui
     };
 
     class Server : public Host {

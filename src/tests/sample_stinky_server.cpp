@@ -44,7 +44,7 @@ int main(void) {
                 std::string test("I am a test message.");
                 unsigned char * test_uc = reinterpret_cast<unsigned char *>(test.data());
                 for (unsigned int i = 0 ; i < server->GetPeersVector().size(); ++i) {
-                    server->FormatAndSend(MG_TEST, server->GetPeersVector()[i], test.length() + 1, test_uc);
+                    //server->FormatAndSend(MG_TEST, server->GetPeersVector()[i], test.length() + 1, test_uc);
                 }
             }
             ImGui::End();

@@ -13,6 +13,7 @@
 #include <cereal/archives/binary.hpp>
 #include <sstream>
 #include <string>
+#include <vector>
 
 uint32_t Stinky::Host::GetPlayerId() {
     return this->playerId;
@@ -238,13 +239,13 @@ void Stinky::Host::Recv() {
                                 TraceLog(LOG_ERROR, "Discarding invalid packet.");
                                 break;
                             }
-
+                        /*
                         case MG_TEST:
                             {
                                 std::cout << std::string(reinterpret_cast<char *>(gameData)) << std::endl;
                                 break;
                             }
-
+                        */
                         case MG_WHOAMI:
                             {
                                 auto playerIdStr = reinterpret_cast<char *>(gameData);
@@ -271,8 +272,38 @@ void Stinky::Host::Recv() {
                                     this->connectedPlayers[pi->id].nickname = std::string(buf);
                                     TraceLog(LOG_INFO, "Set nickname for %zu to %s", pi->id, this->connectedPlayers[pi->id].nickname.c_str());
                                     sendPlayers();
-                                    break;
                                 }
+                                break;
+                            }
+                        case MG_CHAT:
+                            {
+                                std::stringstream ss;
+                                Message msg;
+                                if (HostKeys->isServer) {
+                                    if (gameDataTrueLength > 256) {
+                                        std::memcpy(msg.lastChatMessage, gameData, 255);
+                                        msg.lastChatMessage[255] = '\0';
+                                    } else {
+                                        std::memcpy(msg.lastChatMessage, gameData, gameDataTrueLength);
+                                        msg.lastChatMessage[gameDataTrueLength - 1] = '\0';
+                                    }
+                                    msg.lastChatMessageSource = pi->id;
+                                    {
+                                        cereal::JSONOutputArchive oarchive(ss);
+                                        oarchive(msg);
+                                    }
+                                    for (auto it : this->connectedPeers) {
+                                        this->FormatAndSend(MG_CHAT, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
+                                    }
+                                } else {
+                                    ss << gameData;
+                                    {
+                                        cereal::JSONInputArchive iarchive(ss);
+                                        iarchive(msg);
+                                    }
+                                    this->Messages.push_back(msg);
+                                }
+                                break;
                             }
                     }
                     delete[] gameData;
@@ -285,6 +316,7 @@ void Stinky::Host::Recv() {
             case ENET_EVENT_TYPE_DISCONNECT:
             {
                 if (!this->HostKeys->isServer && this->GetPeersVector().size() == 0) { // handles client connection timeout
+                    std::cout << "retrysafe" << std::endl;
                     this->retrySafe = true;
                     break;
                 }
@@ -406,4 +438,8 @@ void Stinky::Client::AttemptConnect() {
         TraceLog(LOG_INFO, "Starting new connection...");
         this->server = enet_host_connect(this->host, this->serverAddress, this->host->channelLimit, 0);
     }
+}
+
+const std::vector<Stinky::Host::Message> Stinky::Host::GetMessageVector() {
+    return this->Messages;
 }

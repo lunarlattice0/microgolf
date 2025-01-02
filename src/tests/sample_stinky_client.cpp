@@ -1,13 +1,14 @@
 // TEST FOR BASIC STINKY FUNCTIONALITY
 
+#include <cstring>
 #include <enet/enet.h>
-#include <iostream>
 #include <raylib.h>
+#include <string>
 #include "packettypes.hpp"
 #include "vendor/imgui/imgui.h"
-#include "vendor/imgui/misc/cpp/imgui_stdlib.h"
 #include "stinky/stinky.hpp"
 #include "../rlImGui.h"
+#include "gui/style.hpp"
 
 int main(void) {
     const int screenWidth = 640;
@@ -28,7 +29,6 @@ int main(void) {
     Stinky::Client * client = new Stinky::Client(&address, 1, 8, 0);
     client->AttemptConnect();
     while (!WindowShouldClose()) {
-        // TODO: Track time with epoch to determine when to stop trying to connect.
         BeginDrawing();
         {
             rlImGuiBegin();
@@ -38,6 +38,7 @@ int main(void) {
             if (client->GetPeersVector().size() == 0) {
                 client->AttemptConnect();
             } else {
+            SetupGuiStyle();
             ImGui::Begin("Social");
             auto localPlayer = client->GetPlayersMap().at(client->GetPlayerId());
             ImGui::Text("%s [%u]", localPlayer.nickname.c_str(), client->GetPlayerId());
@@ -69,10 +70,35 @@ int main(void) {
                     }
                     ImGui::EndTabItem();
                 }
+                // TODO: Figure out how to hide the hover effect
                 if (ImGui::BeginTabItem("Chat")) {
-                    ImGui::Text("Test");
+                    std::vector<std::string> formattedMessages;
+                    for (auto it : client->GetMessageVector()) {
+                        std::string formattedMessage = "[" + client->GetPlayersMap().at(it.lastChatMessageSource).nickname + "]: " + it.lastChatMessage;
+                        formattedMessages.push_back(formattedMessage);
+                    }
+
+                    static int chatbox_itemcurrent = 0; // don't use this value, the hovering effect is invisible.
+                    ImGui::ListBox("##chatlistbox", &chatbox_itemcurrent,
+                        [](void * data, int n, const char ** out_text)->bool {
+                            const std::vector<std::string>* v = static_cast<std::vector<std::string>*>(data);
+                            *out_text = v->at(n).c_str();
+                            return true;
+                        },
+                        &formattedMessages,
+                        formattedMessages.size()
+                    );
+                    static char msg[256] = "";
+                    ImGui::InputText("##chatinputtext", msg, 31);
+                    msg[255] = '\0';
+                    if (ImGui::Button("Send Message")) {
+                        client->FormatAndSend(MG_CHAT, client->GetPeersVector()[0], 256, reinterpret_cast<unsigned char *>(msg));
+                        std::memset(msg, '\0', 256);
+                    }
+
                     ImGui::EndTabItem();
                 }
+
                 ImGui::EndTabBar();
             }
                 ImGui::End();

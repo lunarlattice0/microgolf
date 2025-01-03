@@ -1,5 +1,6 @@
 // STateful INternet Kit-Y
 // This acronym sucks.
+// TODO: Disable copy/move/copyassign constructors
 
 /*
 Basic setup:
@@ -26,9 +27,10 @@ Client:
 #include <vector>
 #include "packettypes.hpp"
 #include <string>
+#include <ctime>
 
-// This is not related to MTU, but rather the maximum packet size to decrypt. This is to stop DoS attacks against a server.
-#define MAX_MESSAGE_SIZE 3000
+#define MIN_NICKNAME_CHANGE_DELAY 5 // seconds
+#define MIN_CHAT_DELAY 2 // seconds
 
 // Check packettypes.hpp for packet type designations.
 
@@ -49,6 +51,8 @@ namespace Stinky {
             struct PlayerInformation {
                 uint32_t id = 0;
                 std::string nickname = "unnamed";
+                long lastMessageTime = 0; // unreliable replication, investigate?
+                long lastNicknameChangeTime = 0; // unreliable replication, investigate?
                 template <class Archive> void serialize(Archive & archive) {
                     archive(id, nickname);
                 }
@@ -113,6 +117,7 @@ namespace Stinky {
             //
             uint32_t playerId = 0; // 0 on servers.
             std::vector<Message> Messages; // used by client to retrieve using imgui
+            // TODO: Consider trimming old messages? At 260 bytes per message, 1MB of memory will store rouhgly 3850 messages
     };
 
     class Server : public Host {

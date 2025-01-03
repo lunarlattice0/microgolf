@@ -1,5 +1,5 @@
 // TEST FOR BASIC STINKY FUNCTIONALITY
-
+// TODO: Figure out how to let the player know that there is a chat delay
 #include <cstring>
 #include <enet/enet.h>
 #include <raylib.h>

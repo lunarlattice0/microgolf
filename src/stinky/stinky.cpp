@@ -218,9 +218,12 @@ void Stinky::Host::Recv() {
                     // Track this peer.
                     pi->id = randombytes_random();
                     this->connectedPeers[pi->id] = event.peer;
+                    auto currentEpochTime = std::time(0);
                     connectedPlayers[pi->id] = PlayerInformation{
                         .id = pi->id,
                         .nickname = "unnamed",
+                        .lastMessageTime = currentEpochTime,
+                        .lastNicknameChangeTime = currentEpochTime,
                     };
                     // Server only: Send playerlist to everyone on new player join.
                     sendPlayers();
@@ -259,7 +262,8 @@ void Stinky::Host::Recv() {
                             }
                         case MG_NICKNAME_CHANGE: // for server use
                             {
-                                if (HostKeys->isServer) {
+                                auto currentEpochTime = std::time(0);
+                                if (HostKeys->isServer && (currentEpochTime - this->connectedPlayers[pi->id].lastNicknameChangeTime > MIN_NICKNAME_CHANGE_DELAY)) {
                                     char buf[32];
                                     if (gameDataTrueLength > 32) { // concatenate name
                                         std::memcpy(buf, gameData, 31);
@@ -272,14 +276,16 @@ void Stinky::Host::Recv() {
                                     this->connectedPlayers[pi->id].nickname = std::string(buf);
                                     TraceLog(LOG_INFO, "Set nickname for %zu to %s", pi->id, this->connectedPlayers[pi->id].nickname.c_str());
                                     sendPlayers();
+                                    this->connectedPlayers[pi->id].lastNicknameChangeTime = currentEpochTime;
                                 }
                                 break;
                             }
                         case MG_CHAT:
                             {
+                                auto currentEpochTime = std::time(0);
                                 std::stringstream ss;
                                 Message msg;
-                                if (HostKeys->isServer) {
+                                if (HostKeys->isServer && (currentEpochTime - this->connectedPlayers[pi->id].lastMessageTime > MIN_CHAT_DELAY)) {
                                     if (gameDataTrueLength > 256) {
                                         std::memcpy(msg.lastChatMessage, gameData, 255);
                                         msg.lastChatMessage[255] = '\0';
@@ -288,6 +294,7 @@ void Stinky::Host::Recv() {
                                         msg.lastChatMessage[gameDataTrueLength - 1] = '\0';
                                     }
                                     msg.lastChatMessageSource = pi->id;
+
                                     {
                                         cereal::JSONOutputArchive oarchive(ss);
                                         oarchive(msg);
@@ -295,7 +302,8 @@ void Stinky::Host::Recv() {
                                     for (auto it : this->connectedPeers) {
                                         this->FormatAndSend(MG_CHAT, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
                                     }
-                                } else {
+                                    this->connectedPlayers[pi->id].lastMessageTime = currentEpochTime;
+                                } else if (!HostKeys->isServer) {
                                     ss << gameData;
                                     {
                                         cereal::JSONInputArchive iarchive(ss);

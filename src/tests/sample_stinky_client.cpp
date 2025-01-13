@@ -3,6 +3,7 @@
 #include <cstring>
 #include <enet/enet.h>
 #include <raylib.h>
+#include <stdexcept>
 #include <string>
 #include "packettypes.hpp"
 #include "vendor/imgui/imgui.h"
@@ -24,8 +25,8 @@ int main(void) {
     io->LogFilename = NULL;
 
     ENetAddress address;
-    enet_address_set_host(&address, "localhost");
-    address.port = 6969;
+    enet_address_set_host(&address, "");
+    address.port = 8008;
     Stinky::Client * client = new Stinky::Client(&address, 1, 8, 0);
     client->AttemptConnect();
     while (!WindowShouldClose()) {
@@ -74,7 +75,12 @@ int main(void) {
                 if (ImGui::BeginTabItem("Chat")) {
                     std::vector<std::string> formattedMessages;
                     for (auto it : client->GetMessageVector()) {
-                        std::string formattedMessage = "[" + client->GetPlayersMap().at(it.lastChatMessageSource).nickname + "]: " + it.lastChatMessage;
+                        std::string nickname = "disconnected";
+                        try {
+                            auto messagePlayerSource = client->GetPlayersMap().at(it.lastChatMessageSource);
+                            nickname = messagePlayerSource.nickname;
+                        } catch (const std::out_of_range& e) {}
+                        std::string formattedMessage = "[" + nickname + "]: " + it.lastChatMessage;
                         formattedMessages.push_back(formattedMessage);
                     }
 

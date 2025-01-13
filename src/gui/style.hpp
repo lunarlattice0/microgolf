@@ -1,7 +1,9 @@
 // Call this in raylib loop
 #pragma once
+
 #include "imgui.h"
 #include "../vendor/imgui/imgui.h"
+#define IMGUI_USER_CONFIG "./imgui_config.h"
 
 inline void SetupGuiStyle() {
     ImGuiStyle& style = ImGui::GetStyle();

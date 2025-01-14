@@ -28,6 +28,7 @@ Client:
 #include "packettypes.hpp"
 #include <string>
 #include <ctime>
+#include <iostream>
 
 #define MIN_NICKNAME_CHANGE_DELAY 5 // seconds
 #define MIN_CHAT_DELAY 2 // seconds
@@ -64,7 +65,12 @@ namespace Stinky {
             const std::vector<PlayerInformation> GetPlayersVector();
 
             void FormatAndSend(PacketType pt, const ENetPeer * peer, enet_uint32 dataLen, unsigned char * data);
+            template <typename T> void FormatAndSend(PacketType pt, const ENetPeer * peer, enet_uint32 dataLen, T* data) {
+                // TODO: Check this...
+                FormatAndSend(pt, peer, dataLen, reinterpret_cast<unsigned char *>(data));
+            }
             PacketType DecryptAndFormat(const ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted);
+            // Behavior is built into the mainloop anyway, so this is pointless to make generics for
 
             ENetPeer * FindPeerFromId(uint32_t id);
             uint32_t GetPlayerId();
@@ -130,7 +136,6 @@ namespace Stinky {
         private:
             ENetAddress * serverAddress;
             ENetPeer * server;
-            uint32_t myId;
         public:
             // Reference is 1 outgoing connection, 8 channels, 0 (unlimited) bandwidth
             Client(ENetAddress * serverAddress, enet_uint8 outgoing, enet_uint8 channels, enet_uint32 bandwidth);

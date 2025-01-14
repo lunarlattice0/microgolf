@@ -25,8 +25,8 @@ int main(void) {
     io->LogFilename = NULL;
 
     ENetAddress address;
-    enet_address_set_host(&address, "");
-    address.port = 8008;
+    enet_address_set_host(&address, "localhost");
+    address.port = 6969;
     Stinky::Client * client = new Stinky::Client(&address, 1, 8, 0);
     client->AttemptConnect();
     while (!WindowShouldClose()) {
@@ -67,7 +67,8 @@ int main(void) {
                     ImGui::InputText("##inputtext", nick, 31);
                     nick[31] = '\0';
                     if (ImGui::Button("Change Nickname")) {
-                        client->FormatAndSend(MG_NICKNAME_CHANGE, client->GetPeersVector()[0], 32, reinterpret_cast<unsigned char *>(nick));
+                        //client->FormatAndSend(MG_NICKNAME_CHANGE, client->GetPeersVector()[0], 32, reinterpret_cast<unsigned char *>(nick));
+                        client->FormatAndSend<char>(MG_NICKNAME_CHANGE, client->GetPeersVector()[0], 32, nick);
                     }
                     ImGui::EndTabItem();
                 }
@@ -98,7 +99,9 @@ int main(void) {
                     ImGui::InputText("##chatinputtext", msg, 31);
                     msg[255] = '\0';
                     if (ImGui::Button("Send Message")) {
-                        client->FormatAndSend(MG_CHAT, client->GetPeersVector()[0], 256, reinterpret_cast<unsigned char *>(msg));
+
+                        //client->FormatAndSend(MG_CHAT, client->GetPeersVector()[0], 256, reinterpret_cast<unsigned char *>(msg));
+                        client->FormatAndSend<char>(MG_CHAT, client->GetPeersVector()[0], 256, msg);
                         std::memset(msg, '\0', 256);
                     }
 

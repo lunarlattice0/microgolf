@@ -38,11 +38,14 @@ void Stinky::Host::sendPlayers() {
             oarchive(this->connectedPlayers);
         }
         for (auto it : this->connectedPeers) {
-            this->FormatAndSend(MG_PLAYERLIST, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
+            this->FormatAndSend<char>(MG_PLAYERLIST, it.second, ss.str().length() + 1, ss.str().data());
+            //this->FormatAndSend(MG_PLAYERLIST, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
         }
         for (auto it : this->connectedPeers) {
             std::string id = std::to_string(it.first);
-            this->FormatAndSend(MG_WHOAMI, it.second, id.length() + 1, reinterpret_cast<unsigned char *>(id.data()));
+
+            this->FormatAndSend<char>(MG_WHOAMI, it.second, id.length() + 1, id.data());
+            //this->FormatAndSend(MG_WHOAMI, it.second, id.length() + 1, reinterpret_cast<unsigned char *>(id.data()));
         }
         return;
     }
@@ -300,7 +303,8 @@ void Stinky::Host::Recv() {
                                         oarchive(msg);
                                     }
                                     for (auto it : this->connectedPeers) {
-                                        this->FormatAndSend(MG_CHAT, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
+                                        this->FormatAndSend<char>(MG_CHAT, it.second, ss.str().length() + 1, ss.str().data());
+                                        //this->FormatAndSend(MG_CHAT, it.second, ss.str().length() + 1, reinterpret_cast<unsigned char *>(ss.str().data()));
                                     }
                                     this->connectedPlayers[pi->id].lastMessageTime = currentEpochTime;
                                 } else if (!HostKeys->isServer) {
@@ -324,7 +328,7 @@ void Stinky::Host::Recv() {
             case ENET_EVENT_TYPE_DISCONNECT:
             {
                 if (!this->HostKeys->isServer && this->GetPeersVector().size() == 0) { // handles client connection timeout
-                    std::cout << "retrysafe" << std::endl;
+                    //std::cout << "retrysafe" << std::endl;
                     this->retrySafe = true;
                     break;
                 }

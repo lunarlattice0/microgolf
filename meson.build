@@ -5,6 +5,8 @@ project('microgolf', ['cpp', 'c'],
 )
 cmake = import('cmake')
 
+prod_assets_dir = 'assets/out'
+
 opt_var = cmake.subproject_options()
 opt_var.add_cmake_defines({'CMAKE_BUILD_TYPE': 'RelWithDebInfo'})
 luau_subproj = cmake.subproject('luau', options: opt_var)
@@ -31,7 +33,8 @@ microgolf_source_files = [
     'src/main.cpp',
 #    'src/gui/imgui_lua.cpp',
     'src/stinky/stinky.cpp',
-    'src/luahelper/luahelper.cpp',
+    'src/putrid/luahelper/luahelper.cpp',
+    'src/putrid/putrid.cpp',
 ]
 
 microgolf_include_directories = [
@@ -39,7 +42,7 @@ microgolf_include_directories = [
     'src/',
     'src/stinky',
     'src/gui',
-    'src/luahelper',
+    'src/putrid',
 ]
 
 imgui_source_files = [
@@ -51,7 +54,12 @@ imgui_source_files = [
     'src/vendor/imgui/misc/cpp/imgui_stdlib.cpp',
 ]
 
-executable('microgolf', [microgolf_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
+microgolf = executable('microgolf',
+[microgolf_source_files, imgui_source_files],
+dependencies: microgolf_deps,
+include_directories: microgolf_include_directories,
+)
+# TODO: make a production export target
 
 # Samples / Tests below
 
@@ -85,3 +93,9 @@ test('sample_stinky_client', sample_stinky_client)
 #]
 #sample_lua = executable('sample_lua', ['src/rlImGui.cpp', sample_lua_source_files, imgui_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
 #test('sample_lua', sample_lua)
+
+sample_raylib_render_source_files = [
+    'src/tests/sample_raylib_render.cpp',
+]
+sample_raylib_render = executable('sample_raylib_render', [sample_raylib_render_source_files], dependencies: microgolf_deps, include_directories: microgolf_include_directories,)
+test('sample_raylib_render', sample_raylib_render)

@@ -17,6 +17,13 @@ Client:
 4) Call destructor when done.
 */
 
+// Note:
+// Q: What is the distinction between peers and players?
+// A: Players are considered the abstracted version of a peer; PlayerInformation provides human-readable information like ID and nickname
+// A: Peers are connected instances that are intended for use with ENet/FormatAndSend. Not recommended for use with human-readable implementations.
+
+// Check packettypes.hpp for packet type designations.
+
 #pragma once
 
 #include <cstdint>
@@ -28,19 +35,15 @@ Client:
 #include "packettypes.hpp"
 #include <string>
 #include <ctime>
-#include <iostream>
 
 #define MIN_NICKNAME_CHANGE_DELAY 5 // seconds
 #define MIN_CHAT_DELAY 2 // seconds
 
-// Check packettypes.hpp for packet type designations.
-
-// Note: What is the distinction between peers and players?
-// Players are considered the abstracted version of a peer; PlayerInformation provides human-readable information like ID and nickname
-// Peers are connected instances that are intended for use with ENet/FormatAndSend. Not recommended for use with human-readable implementations.
 namespace Stinky {
     class Host { // Abstract class that Server and Client derive from.
         public:
+
+            // Struct describing a MG_CHAT message
             struct Message {
                 char lastChatMessage[256];
                 uint32_t lastChatMessageSource = 0;
@@ -49,6 +52,7 @@ namespace Stinky {
                 }
             };
             const std::vector<Message> GetMessageVector();
+
             struct PlayerInformation {
                 uint32_t id = 0;
                 std::string nickname = "unnamed";
@@ -58,7 +62,9 @@ namespace Stinky {
                     archive(id, nickname);
                 }
             };
+
             void Recv();
+
             const std::unordered_map<uint32_t, ENetPeer*> GetPeersMap();
             const std::vector<ENetPeer*> GetPeersVector();
             const std::unordered_map<uint32_t, PlayerInformation> GetPlayersMap();
@@ -66,11 +72,11 @@ namespace Stinky {
 
             void FormatAndSend(PacketType pt, const ENetPeer * peer, enet_uint32 dataLen, unsigned char * data);
             template <typename T> void FormatAndSend(PacketType pt, const ENetPeer * peer, enet_uint32 dataLen, T* data) {
-                // TODO: Check this...
                 FormatAndSend(pt, peer, dataLen, reinterpret_cast<unsigned char *>(data));
             }
-            PacketType DecryptAndFormat(const ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted);
+
             // Behavior is built into the mainloop anyway, so this is pointless to make generics for
+            PacketType DecryptAndFormat(const ENetPeer * peer, enet_uint32 receivedLen, unsigned char * received, unsigned char * decrypted);
 
             ENetPeer * FindPeerFromId(uint32_t id);
             uint32_t GetPlayerId();

@@ -4,3 +4,6 @@
 [submodule "src/vendor/imgui"]
 	path = src/vendor/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "src/vendor/raylib-nuklear"]
+	path = src/vendor/raylib-nuklear
+	url = https://github.com/RobLoach/raylib-nuklear.git

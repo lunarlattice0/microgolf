@@ -3,32 +3,37 @@
 #include <cereal/cereal.hpp>
 #include <raylib.h>
 #include <fstream>
-#include <sstream>
+#include <filesystem>
 
-const std::unordered_map<std::string, std::string> MicrogolfFilePaths = {
-    {"config", std::string(GetApplicationDirectory()) + "config.cfg"},
-    {"menubg", std::string(GetApplicationDirectory()) + "./assets/out/mainmenu.png"},
-};
+AssetManager::AssetManager() {
 
-Config LoadConfigFromFile(const char *filepath) {
+    for (auto it : MicrogolfFilePaths) {
+        if (!std::filesystem::exists(it.second)) {
+            TraceLog(LOG_ERROR, "Missing file: %s", it.second.c_str());
+           // TODO: Figure out how to yell at people on macos and windows
+            std::exit(1);
+        }
+    }
+}
+
+Config AssetManager::LoadConfig() {
     Config config;
-    if (std::filesystem::is_empty(filepath)) {
+    if (std::filesystem::is_empty(MicrogolfFilePaths.at("config"))) {
         return config;
     }
 
-    std::ifstream configFile(filepath);
+    std::ifstream configFile(MicrogolfFilePaths.at("config"));
     {
         cereal::JSONInputArchive iarchive(configFile);
         iarchive(config);
     }
     configFile.close();
 
-
     return config;
 }
 
-void SaveConfigToFile(const char *filepath, Config config) {
-    std::ofstream configFile(filepath);
+void AssetManager::SaveConfig(Config config) {
+    std::ofstream configFile(MicrogolfFilePaths.at("config"));
     {
         cereal::JSONOutputArchive oarchive(configFile);
         oarchive(config);
@@ -36,13 +41,13 @@ void SaveConfigToFile(const char *filepath, Config config) {
     configFile.close();
 }
 
-// Validate
-void CheckFilePaths() {
-    for (auto it : MicrogolfFilePaths) {
-        if (!std::filesystem::exists(it.second)) {
-            TraceLog(LOG_ERROR, "Missing file: %s", it.second.c_str());
-            // TODO: Figure out how to yell at people on macos and windows
-            std::exit(1);
-        }
+std::string AssetManager::GetAssetPathByName(std::string name) {
+    // Since we can call this from lua, there is some leniency about name referring to an actual file.
+    auto asset = MicrogolfFilePaths.find(name);
+    if (asset == MicrogolfFilePaths.end()) {
+        TraceLog(LOG_ERROR, "Requested asset, %s, not found!", name.c_str());
+        return "";
+    } else {
+        return asset->second;
     }
 }

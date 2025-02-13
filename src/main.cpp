@@ -2,6 +2,7 @@
 #include "putrid/luahelper/luahelper.hpp"
 #include "stinky/stinky.hpp"
 #include <map>
+#include <memory>
 #include <raylib.h>
 #include <unordered_map>
 #include "../gui/style.hpp"
@@ -14,8 +15,8 @@ int main() {
     // TODO: Figure out a fancy pants config menu
 
     // Load config from file
-    CheckFilePaths();
-    Config active_cfg = LoadConfigFromFile(MicrogolfFilePaths.at("config").c_str());
+    std::unique_ptr<AssetManager> asMgr = std::make_unique<AssetManager>();
+    Config active_cfg = asMgr->LoadConfig();
 
     // Calculate starting resolution
     int screenWidth = 640 * active_cfg.res.multiplier;
@@ -36,7 +37,7 @@ int main() {
     io->LogFilename = NULL;
 
     // Draw main menu
-    Image mainmenuimg = LoadImage(MicrogolfFilePaths.at("menubg").c_str());
+    Image mainmenuimg = LoadImage(asMgr->GetAssetPathByName("menubg").c_str());
     ImageResize(&mainmenuimg, screenWidth, screenHeight);
     Texture2D mainmenubg = LoadTextureFromImage(mainmenuimg);
     Rectangle srcRect = {0,0,1920,1080}; // source image is 1920x1080
@@ -77,7 +78,7 @@ int main() {
                     if (ImGui::Button("Save and Close")) {
                         displayConfig = false;
                         active_cfg.res = current_res;
-                        SaveConfigToFile(MicrogolfFilePaths.at("config").c_str(), active_cfg);
+                        asMgr->SaveConfig(active_cfg);
 
                         // Apply resolution changes
                         screenWidth = 640 * active_cfg.res.multiplier;

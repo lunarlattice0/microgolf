@@ -56,29 +56,37 @@ int main() {
                 ImGui::SliderInt("Monitor number", &draft_cfg.res.selectedMonitor, 0, GetMonitorCount() - 1);
                 ImGui::Text("Selected Monitor: %s", GetMonitorName(draft_cfg.res.selectedMonitor));
 
-                // Configure Resolution
-                ImGui::Text("Resolution");
-
+                // Disable resolution settings if in fullscreen
                 if (draft_cfg.res.fullscreen) {
                     ImGui::BeginDisabled();
                 }
 
-                static int multiplier;
-                if (draft_cfg.res.downscaling) {
-                    multiplier = GetMonitorHeight(draft_cfg.res.selectedMonitor) / draft_cfg.res.y;
+                // Screen Ratio Selection
+                const char * ratios[RATIOCOUNTER] = {"4:3", "16:9", "16:10"};
+                const char * selected_ratio = ratios[draft_cfg.res.selectedRatio]; // unsure if safe...?
+                ImGui::NewLine();
+                ImGui::SliderInt("Resolution Ratio", &draft_cfg.res.selectedRatio, 0, RATIOCOUNTER - 1, selected_ratio, ImGuiSliderFlags_NoInput);
+
+                // Display Resolution Multiplier
+                static int multiplier = 1;
+                ImGui::SliderInt("##", &multiplier, 1, 6);
+
+                int baseResolutionX;
+                int baseResolutionY;
+                if (draft_cfg.res.selectedRatio == FOURBYTHREE) {
+                    baseResolutionX = 640;
+                    baseResolutionY = 480;
+                } else if (draft_cfg.res.selectedRatio == SIXTEENBYNINE) {
+                    baseResolutionX = 640;
+                    baseResolutionY = 360;
                 } else {
-                    multiplier = draft_cfg.res.y / GetMonitorHeight(draft_cfg.res.selectedMonitor);
+                    baseResolutionX = 1280;
+                    baseResolutionY = 800;
                 }
 
-                ImGui::SliderInt("##", &multiplier, 1, 4);
-                ImGui::Checkbox("Downscale Resolution", &draft_cfg.res.downscaling);
-                if (draft_cfg.res.downscaling) {
-                    draft_cfg.res.x = GetMonitorWidth(draft_cfg.res.selectedMonitor) / multiplier;
-                    draft_cfg.res.y = GetMonitorHeight(draft_cfg.res.selectedMonitor) / multiplier;
-                } else {
-                    draft_cfg.res.x = multiplier * GetMonitorWidth(draft_cfg.res.selectedMonitor);
-                    draft_cfg.res.y = multiplier * GetMonitorHeight(draft_cfg.res.selectedMonitor);
-                }
+                draft_cfg.res.x = multiplier * baseResolutionX;
+                draft_cfg.res.y = multiplier * baseResolutionY;
+
                 ImGui::Text("Selected: %dx%d", draft_cfg.res.x, draft_cfg.res.y);
                 if (draft_cfg.res.fullscreen) {
                     ImGui::EndDisabled();

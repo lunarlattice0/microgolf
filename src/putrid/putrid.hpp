@@ -5,18 +5,26 @@
 #include <cstdlib>
 #include <raylib.h>
 
+enum Ratio {
+    FOURBYTHREE,
+    SIXTEENBYNINE,
+    SIXTEENBYTEN,
+    RATIOCOUNTER,
+};
+
 struct Resolution {
+
     // Resolution is calculated by 640*multiplier, 480*multiplier
     // This should be unsigned int, but imgui doesn't support that...
+    int selectedRatio = SIXTEENBYNINE;
     int selectedMonitor = 0;
-    bool downscaling = false;
     int x = 1920;
     int y = 1080;
     int targetFPS = 60;
     bool fullscreen = false;
     template <class Archive>
         void serialize(Archive &archive) {
-            archive(selectedMonitor, downscaling, x, y, fullscreen, targetFPS);
+            archive(selectedRatio, selectedMonitor, x, y, fullscreen, targetFPS);
         }
 };
 

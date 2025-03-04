@@ -63,14 +63,16 @@ int main() {
                     ImGui::BeginDisabled();
                 }
 
-                // TODO: Add a dropdown box for selecting ratio; GetMonitorHeight is too unreliable.
-
-                static int multiplier = draft_cfg.res.y / GetMonitorHeight(draft_cfg.res.selectedMonitor);
-                static bool downscaling = false;
+                static int multiplier;
+                if (draft_cfg.res.downscaling) {
+                    multiplier = GetMonitorHeight(draft_cfg.res.selectedMonitor) / draft_cfg.res.y;
+                } else {
+                    multiplier = draft_cfg.res.y / GetMonitorHeight(draft_cfg.res.selectedMonitor);
+                }
 
                 ImGui::SliderInt("##", &multiplier, 1, 4);
-                ImGui::Checkbox("Downscale Resolution", &downscaling);
-                if (downscaling) {
+                ImGui::Checkbox("Downscale Resolution", &draft_cfg.res.downscaling);
+                if (draft_cfg.res.downscaling) {
                     draft_cfg.res.x = GetMonitorWidth(draft_cfg.res.selectedMonitor) / multiplier;
                     draft_cfg.res.y = GetMonitorHeight(draft_cfg.res.selectedMonitor) / multiplier;
                 } else {
@@ -105,6 +107,7 @@ int main() {
                     asMgr->SaveConfig(*cfgMgr->GetActiveConfig());
                 }
 
+                // TODO: Consider adding resiziable window...
                 ImGui::End();
             }
             rlImGuiEnd();

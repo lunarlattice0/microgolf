@@ -9,13 +9,14 @@ struct Resolution {
     // Resolution is calculated by 640*multiplier, 480*multiplier
     // This should be unsigned int, but imgui doesn't support that...
     int selectedMonitor = 0;
+    bool downscaling = false;
     int x = 1920;
     int y = 1080;
     int targetFPS = 60;
     bool fullscreen = false;
     template <class Archive>
         void serialize(Archive &archive) {
-            archive(selectedMonitor, x, y, fullscreen, targetFPS);
+            archive(selectedMonitor, downscaling, x, y, fullscreen, targetFPS);
         }
 };
 

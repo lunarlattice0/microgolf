@@ -8,20 +8,24 @@
 struct Resolution {
     // Resolution is calculated by 640*multiplier, 480*multiplier
     // This should be unsigned int, but imgui doesn't support that...
-    int multiplier = 1;
+    int selectedMonitor = 0;
+    int x = 1920;
+    int y = 1080;
+    int targetFPS = 60;
     bool fullscreen = false;
     template <class Archive>
         void serialize(Archive &archive) {
-            archive(multiplier, fullscreen);
+            archive(selectedMonitor, x, y, fullscreen, targetFPS);
         }
 };
 
 // Serialize and Deserialize Config
 struct Config {
     Resolution res;
+    uint fontSize = 15;
     template <class Archive>
     void serialize(Archive &archive) {
-        archive(res);
+        archive(res, fontSize);
     }
 };
 
@@ -31,8 +35,13 @@ class AssetManager {
         // Constructor checks for file presence, dtor not required.
         AssetManager();
 
+        // Save a config to file.
         void SaveConfig(Config config);
+
+        // Load a config from file.
         Config LoadConfig();
+
+        // Look for an asset by name to retrieve path.
         std::string GetAssetPathByName(std::string);
     private:
         const std::unordered_map<std::string, std::string> MicrogolfFilePaths = {
@@ -41,4 +50,17 @@ class AssetManager {
             {"config", std::string(GetApplicationDirectory()) + "./assets/config.cfg"},
             {"menubg", std::string(GetApplicationDirectory()) + "./assets/out/mainmenu.png"},
         };
+};
+
+class ConfigManager {
+    public:
+        // Load a configuration to active configuration slot and applies it.
+        void SetActiveConfig(Config);
+
+        // Get the active configuration
+        const Config * GetActiveConfig();
+    private:
+        Config activeConfig;
+        void ApplyActiveConfig();
+
 };

@@ -6,7 +6,6 @@
 #include <filesystem>
 
 AssetManager::AssetManager() {
-
     for (auto it : MicrogolfFilePaths) {
         if (!std::filesystem::exists(it.second)) {
             TraceLog(LOG_ERROR, "Missing file: %s", it.second.c_str());
@@ -24,6 +23,7 @@ Config AssetManager::LoadConfig() {
 
     std::ifstream configFile(MicrogolfFilePaths.at("config"));
     {
+        // TODO: make failure handling a bit better.
         cereal::JSONInputArchive iarchive(configFile);
         iarchive(config);
     }
@@ -50,4 +50,32 @@ std::string AssetManager::GetAssetPathByName(std::string name) {
     } else {
         return asset->second;
     }
+}
+
+void ConfigManager::SetActiveConfig(Config config) {
+    this->activeConfig = config;
+    ApplyActiveConfig();
+}
+
+void ConfigManager::ApplyActiveConfig() {
+    int screenWidth = this->activeConfig.res.x;
+    int screenHeight = this->activeConfig.res.y;
+
+    // Only run if raylib has not cretaed a window yet.
+    if (!IsWindowReady()) {
+        InitWindow(screenWidth, screenHeight, "Microgolf");
+        InitAudioDevice();
+    }
+
+    if (IsWindowFullscreen() != this->activeConfig.res.fullscreen) {
+            ToggleFullscreen();
+        }
+
+    SetWindowMonitor(this->activeConfig.res.selectedMonitor);
+    SetWindowSize(this->activeConfig.res.x, this->activeConfig.res.y);
+    SetTargetFPS(this->activeConfig.res.targetFPS);
+}
+
+const Config * ConfigManager::GetActiveConfig() {
+    return &this->activeConfig;
 }

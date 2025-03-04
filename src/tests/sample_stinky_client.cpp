@@ -8,7 +8,7 @@
 #include "packettypes.hpp"
 #include "vendor/imgui/imgui.h"
 #include "stinky/stinky.hpp"
-#include "../rlImGui.h"
+#include "src/vendor/rlImGui/rlImGui.h"
 #include "gui/style.hpp"
 
 int main(void) {

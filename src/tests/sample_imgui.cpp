@@ -3,7 +3,7 @@
 #include <raylib.h>
 #include "../gui/style.hpp"
 #include "../vendor/imgui/imgui.h"
-#include "../rlImGui.h"
+#include "src/vendor/rlImGui/rlImGui.h"
 
 // Todo: Consider mapload as first argument
 int main(void) {

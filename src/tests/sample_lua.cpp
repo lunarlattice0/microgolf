@@ -8,7 +8,7 @@
 #include <raylib.h>
 
 #include "../vendor/imgui/imgui.h"
-#include "../rlImGui.h"
+#include "src/vendor/rlImGui/rlImGui.h"
 #include "misc/cpp/imgui_stdlib.h"
 #include <iostream>
 #include <fstream>

@@ -1,102 +1,120 @@
 #include "putrid/putrid.hpp"
-#include "putrid/luahelper/luahelper.hpp"
-#include "stinky/stinky.hpp"
-#include <map>
+#include "src/vendor/rlImGui/rlImGui.h"
+#include "imgui.h"
+#include "style.hpp"
 #include <memory>
 #include <raylib.h>
-#include <unordered_map>
-#include "../gui/style.hpp"
-#include "../vendor/imgui/imgui.h"
-#include "../rlImGui.h"
-
 
 int main() {
     // TODO: Figure out a fancy pants menu system.
     // TODO: Figure out a fancy pants config menu
 
+    SetExitKey(0);
+
     // Load config from file
     std::unique_ptr<AssetManager> asMgr = std::make_unique<AssetManager>();
-    Config active_cfg = asMgr->LoadConfig();
+    std::unique_ptr<ConfigManager> cfgMgr = std::make_unique<ConfigManager>();
+    cfgMgr->SetActiveConfig(asMgr->LoadConfig());
 
-    // Calculate starting resolution
-    int screenWidth = 640 * active_cfg.res.multiplier;
-    int screenHeight = 360 * active_cfg.res.multiplier;
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(screenWidth, screenHeight, "Microgolf");
-    if (IsWindowFullscreen() != active_cfg.res.fullscreen) {
-        ToggleFullscreen();
-    }
-
-    SetTargetFPS(60);
-    InitAudioDevice();
-
-    // Setup ImGui for configmenus
+    // Set up ImGui
     rlImGuiSetup(true);
-    ImGuiIO* io = &ImGui::GetIO();
-    io->IniFilename = NULL;
-    io->LogFilename = NULL;
 
     // Draw main menu
     Image mainmenuimg = LoadImage(asMgr->GetAssetPathByName("menubg").c_str());
-    ImageResize(&mainmenuimg, screenWidth, screenHeight);
     Texture2D mainmenubg = LoadTextureFromImage(mainmenuimg);
-    Rectangle srcRect = {0,0,1920,1080}; // source image is 1920x1080
 
-    bool displayConfig = false;
+    bool displayConfig = true;
     // TODO: Check why imgui menus don't display on fullscreen?
-    bool displayServerList = false;
+    //bool displayServerList = false;
 
     while (!WindowShouldClose()) {
-        BeginDrawing();
         ClearBackground(RAYWHITE);
-        DrawTextureRec(mainmenubg, srcRect, {0,0}, WHITE);
-            // ImGui tasks for drawing config windows
-            {
-                rlImGuiBegin();
-                SetupGuiStyle();
+        /*
+        Layer 0: Gameplay
+        Layer 1: Gameplay GUIs
+        Layer 2: PauseMenu Texture
+        Layer 3: PauseMenu GUIs
+        */
+        BeginDrawing();
+        DrawTexturePro(mainmenubg, {0,0,1920,1080}, {0,0,static_cast<float>(GetScreenWidth()),static_cast<float>(GetScreenHeight())}, {0,0}, 0, WHITE);
+        {
+            rlImGuiBegin();
+            SetupGuiStyle();
 
-                if (displayConfig) {
-                    static Resolution current_res = active_cfg.res;
+            if (displayConfig) {
+                // Create a new draft cfg
+                static Config draft_cfg = *cfgMgr->GetActiveConfig();
 
-                    ImGui::Begin("Config");
-                    ImGui::Text("Resolution");
-                    if (current_res.fullscreen) {
-                       ImGui::BeginDisabled();
-                    }
-                    ImGui::SliderInt("##", &current_res.multiplier, 1, 6);
-                    ImGui::Text("Selected: %dx%d", current_res.multiplier * 640, current_res.multiplier * 360);
-                    if (current_res.fullscreen) {
-                        ImGui::EndDisabled();
-                    }
+                // Window title
+                ImGui::Begin("Config");
 
-                    ImGui::Checkbox("Fullscreen", &current_res.fullscreen);
-                    if (ImGui::Button("Discard Changes")) {
-                        displayConfig = false;
-                        current_res = active_cfg.res;
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Save and Close")) {
-                        displayConfig = false;
-                        active_cfg.res = current_res;
-                        asMgr->SaveConfig(active_cfg);
+                ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor::HSV(1.0f,0.0f,0.0f));
+                ImGui::Text("Display Settings");
+                ImGui::PopStyleColor();
 
-                        // Apply resolution changes
-                        screenWidth = 640 * active_cfg.res.multiplier;
-                        screenHeight =  360 * active_cfg.res.multiplier;
-                        SetWindowSize(screenWidth,screenHeight);
-                        if (current_res.fullscreen != IsWindowFullscreen()) {
-                            ToggleFullscreen();
-                        }
-                    }
-                    ImGui::End();
+                // Monitor selection
+                ImGui::SliderInt("Monitor number", &draft_cfg.res.selectedMonitor, 0, GetMonitorCount() - 1);
+                ImGui::Text("Selected Monitor: %s", GetMonitorName(draft_cfg.res.selectedMonitor));
+
+                // Configure Resolution
+                ImGui::Text("Resolution");
+
+                if (draft_cfg.res.fullscreen) {
+                    ImGui::BeginDisabled();
                 }
-                rlImGuiEnd();
+
+                // TODO: Add a dropdown box for selecting ratio; GetMonitorHeight is too unreliable.
+
+                static int multiplier = draft_cfg.res.y / GetMonitorHeight(draft_cfg.res.selectedMonitor);
+                static bool downscaling = false;
+
+                ImGui::SliderInt("##", &multiplier, 1, 4);
+                ImGui::Checkbox("Downscale Resolution", &downscaling);
+                if (downscaling) {
+                    draft_cfg.res.x = GetMonitorWidth(draft_cfg.res.selectedMonitor) / multiplier;
+                    draft_cfg.res.y = GetMonitorHeight(draft_cfg.res.selectedMonitor) / multiplier;
+                } else {
+                    draft_cfg.res.x = multiplier * GetMonitorWidth(draft_cfg.res.selectedMonitor);
+                    draft_cfg.res.y = multiplier * GetMonitorHeight(draft_cfg.res.selectedMonitor);
+                }
+                ImGui::Text("Selected: %dx%d", draft_cfg.res.x, draft_cfg.res.y);
+                if (draft_cfg.res.fullscreen) {
+                    ImGui::EndDisabled();
+                }
+
+                // Framerate selection
+                ImGui::InputInt("Target FPS", &draft_cfg.res.targetFPS);
+
+                // Fullscreen setting
+                ImGui::Checkbox("Fullscreen", &draft_cfg.res.fullscreen);
+                if (ImGui::Button("Discard Changes")) {
+                    displayConfig = false;
+                    draft_cfg = *cfgMgr->GetActiveConfig();
+                }
+
+                // Closing buttons
+                ImGui::SameLine();
+                if (ImGui::Button("Save and Close")) {
+                    displayConfig = false;
+                    cfgMgr->SetActiveConfig(draft_cfg);
+                    asMgr->SaveConfig(*cfgMgr->GetActiveConfig());
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Apply")) { // consider enabling autorevert
+                    cfgMgr->SetActiveConfig(draft_cfg);
+                    asMgr->SaveConfig(*cfgMgr->GetActiveConfig());
+                }
+
+                ImGui::End();
             }
-            // End of ImGui Section
+            rlImGuiEnd();
+        }
         EndDrawing();
+
     }
     rlImGuiShutdown();
     UnloadTexture(mainmenubg);
     CloseAudioDevice();
     CloseWindow();
+    return 0;
 }

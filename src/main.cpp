@@ -73,10 +73,10 @@ int main() {
                 const char * ratios[RATIOCOUNTER] = {"4:3", "16:9", "16:10"};
                 const char * selected_ratio = ratios[draft_cfg.res.selectedRatio]; // unsure if safe...?
                 ImGui::NewLine();
-                ImGui::SliderInt("Resolution Ratio", &draft_cfg.res.selectedRatio, 0, RATIOCOUNTER - 1, selected_ratio, ImGuiSliderFlags_NoInput);
+                ImGui::SliderInt("Aspect Ratio", &draft_cfg.res.selectedRatio, 0, RATIOCOUNTER - 1, selected_ratio, ImGuiSliderFlags_NoInput);
 
                 // Display Resolution Multiplier
-                ImGui::SliderInt("##", &draft_cfg.res.multiplier, 1, 6);
+                ImGui::SliderInt("##", &draft_cfg.res.multiplier, 1, 6, "Resolution");
 
                 int baseResolutionX;
                 int baseResolutionY;

@@ -51,6 +51,10 @@ int main() {
                     ImGuiWindowFlags_NoCollapse |
                     ImGuiWindowFlags_AlwaysAutoResize);
 
+                // Disable imgui config
+                ImGuiIO* io = &ImGui::GetIO();
+                io->IniFilename = NULL;
+                io->LogFilename = NULL;
 
                 ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor::HSV(1.0f,0.0f,0.0f));
                 ImGui::Text("Display Settings");

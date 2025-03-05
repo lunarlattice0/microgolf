@@ -68,8 +68,7 @@ int main() {
                 ImGui::SliderInt("Resolution Ratio", &draft_cfg.res.selectedRatio, 0, RATIOCOUNTER - 1, selected_ratio, ImGuiSliderFlags_NoInput);
 
                 // Display Resolution Multiplier
-                static int multiplier = 1;
-                ImGui::SliderInt("##", &multiplier, 1, 6);
+                ImGui::SliderInt("##", &draft_cfg.res.multiplier, 1, 6);
 
                 int baseResolutionX;
                 int baseResolutionY;
@@ -84,12 +83,16 @@ int main() {
                     baseResolutionY = 800;
                 }
 
-                draft_cfg.res.x = multiplier * baseResolutionX;
-                draft_cfg.res.y = multiplier * baseResolutionY;
+                draft_cfg.res.x = draft_cfg.res.multiplier * baseResolutionX;
+                draft_cfg.res.y = draft_cfg.res.multiplier * baseResolutionY;
 
                 ImGui::Text("Selected: %dx%d", draft_cfg.res.x, draft_cfg.res.y);
+
+                // Disable and reset resolution controls if fullscreen is enabled. otherwise, the window breaks.
                 if (draft_cfg.res.fullscreen) {
                     ImGui::EndDisabled();
+                    draft_cfg.res.x = GetMonitorWidth(draft_cfg.res.selectedMonitor);
+                    draft_cfg.res.y = GetMonitorHeight(draft_cfg.res.selectedMonitor);
                 }
 
                 // Framerate selection

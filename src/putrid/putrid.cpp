@@ -8,6 +8,10 @@
 AssetManager::AssetManager() {
     for (auto it : MicrogolfFilePaths) {
         if (!std::filesystem::exists(it.second)) {
+            if (it.second == MicrogolfFilePaths.at("config")) {
+                TraceLog(LOG_INFO, "Missing config, will load a default...");
+                continue;
+            }
             TraceLog(LOG_ERROR, "Missing file: %s", it.second.c_str());
            // TODO: Figure out how to yell at people on macos and windows
             std::exit(1);
@@ -17,7 +21,9 @@ AssetManager::AssetManager() {
 
 Config AssetManager::LoadConfig() {
     Config config;
-    if (std::filesystem::is_empty(MicrogolfFilePaths.at("config"))) {
+    if (!std::filesystem::exists(MicrogolfFilePaths.at("config")) || std::filesystem::is_empty(MicrogolfFilePaths.at("config"))) {
+        // Save the default conf
+        SaveConfig(config);
         return config;
     }
 

@@ -13,18 +13,16 @@ enum Ratio {
 };
 
 struct Resolution {
-
-    // Resolution is calculated by 640*multiplier, 480*multiplier
-    // This should be unsigned int, but imgui doesn't support that...
-    int selectedRatio = SIXTEENBYNINE;
+    int multiplier = 1; // Used to select display resolution multiplier
+    int selectedRatio = SIXTEENBYNINE; //
     int selectedMonitor = 0;
-    int x = 1920;
-    int y = 1080;
+    int x = 640;
+    int y = 360;
     int targetFPS = 60;
     bool fullscreen = false;
     template <class Archive>
         void serialize(Archive &archive) {
-            archive(selectedRatio, selectedMonitor, x, y, fullscreen, targetFPS);
+            archive(multiplier, selectedRatio, selectedMonitor, x, y, fullscreen, targetFPS);
         }
 };
 

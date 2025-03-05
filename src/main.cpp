@@ -46,7 +46,11 @@ int main() {
                 static Config draft_cfg = *cfgMgr->GetActiveConfig();
 
                 // Window title
-                ImGui::Begin("Config");
+                ImGui::Begin("Config", NULL, ImGuiWindowFlags_NoSavedSettings |
+                    ImGuiWindowFlags_NoResize |
+                    ImGuiWindowFlags_NoCollapse |
+                    ImGuiWindowFlags_AlwaysAutoResize);
+
 
                 ImGui::PushStyleColor(ImGuiCol_Text, (ImVec4)ImColor::HSV(1.0f,0.0f,0.0f));
                 ImGui::Text("Display Settings");

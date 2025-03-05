@@ -13,7 +13,7 @@ inline void SetupGuiStyle() {
 
 
     style.Alpha = 1.0f;
-    style.FrameRounding = 3.0f;
+    style.FrameRounding = 0.0f;
     style.Colors[ImGuiCol_Text] = ImVec4(0.0f, 0.2f, 0.60f, 1.0f);
     style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
     style.Colors[ImGuiCol_WindowBg] = ImVec4(.8f, 0.8f, .8f, 1.0f);

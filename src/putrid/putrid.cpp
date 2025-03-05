@@ -23,7 +23,14 @@ Config AssetManager::LoadConfig() {
 
     std::ifstream configFile(MicrogolfFilePaths.at("config"));
     {
-        // TODO: make failure handling a bit better.
+        // New error recover strategy:
+        // Attempt to deserialize
+        // On failure, check which struct element is unfilled, and fill it with default
+        // Save to file
+        // Attempt to reload
+        // repeat until no errors
+
+
         cereal::JSONInputArchive iarchive(configFile);
         iarchive(config);
     }

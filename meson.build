@@ -39,6 +39,7 @@ microgolf_source_files = [
     'src/vendor/imgui/imgui_widgets.cpp',
     'src/vendor/imgui/misc/cpp/imgui_stdlib.cpp',
 
+    'src/gui/common.cpp',
     'src/stinky/stinky.cpp',
     'src/putrid/putrid.cpp',
 ]

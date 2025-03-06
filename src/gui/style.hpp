@@ -1,16 +1,13 @@
-// Call this in raylib loop
+// Styling functions, not necessary for function.
 #pragma once
 
 #include "src/vendor/imgui/imgui.h"
-
-#define IMGUI_USER_CONFIG "./imgui_config.h"
 
 inline void SetupGuiStyle() {
     ImGuiStyle& style = ImGui::GetStyle();
 
     ImVec4 lowIntensityOrange = ImVec4(1.0f, 0.5f, 0.08f, 1.0f);
     ImVec4 highIntensityOrange = ImVec4(1.0f, 0.6f, 0.08f, 0.9f);
-
 
     style.Alpha = 1.0f;
     style.FrameRounding = 0.0f;

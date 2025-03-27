@@ -3,8 +3,8 @@
 #include "putrid.hpp"
 #include <memory>
 
-void SettingsGUI(bool run, std::shared_ptr<AssetManager> asMgr, std::shared_ptr<ConfigManager> cfgMgr) {
-    if (run) {
+void SettingsGUI(bool * run, std::shared_ptr<AssetManager> asMgr, std::shared_ptr<ConfigManager> cfgMgr) {
+    if (*run) {
         // Create a new draft cfg
         static Config draft_cfg = *cfgMgr->GetActiveConfig();
 
@@ -72,14 +72,14 @@ void SettingsGUI(bool run, std::shared_ptr<AssetManager> asMgr, std::shared_ptr<
         // Fullscreen setting
         ImGui::Checkbox("Fullscreen", &draft_cfg.res.fullscreen);
         if (ImGui::Button("Discard Changes")) {
-            run = false;
+            *run = false;
             draft_cfg = *cfgMgr->GetActiveConfig();
         }
 
         // Closing buttons
         ImGui::SameLine();
         if (ImGui::Button("Save and Close")) {
-            run = false;
+            *run = false;
             cfgMgr->SetActiveConfig(draft_cfg);
             asMgr->SaveConfig(*cfgMgr->GetActiveConfig());
         }

@@ -1,14 +1,15 @@
 #include "putrid/putrid.hpp"
 #include "src/vendor/rlImGui/rlImGui.h"
-#include "common.hpp"
-#include "style.hpp"
+#include "src/putrid/gui/common.hpp"
+#include "src/putrid/gui/style.hpp"
 #include <memory>
 #include <raylib.h>
+#define RAYGUI_IMPLEMENTATION
+#include "src/vendor/raygui/src/raygui.h"
 
 int main() {
-    // TODO: Figure out a fancy pants menu system.
-    // TODO: Figure out a fancy pants config menu
 
+    // Disable esc quit
     SetExitKey(0);
 
     // Load config from file
@@ -19,31 +20,48 @@ int main() {
     // Set up ImGui
     rlImGuiSetup(true);
 
-    // Draw main menu
-    Image mainmenuimg = LoadImage(asMgr->GetAssetPathByName("menubg").c_str());
-    Texture2D mainmenubg = LoadTextureFromImage(mainmenuimg);
-
-    bool displayConfig = true;
-    // TODO: Check why imgui menus don't display on fullscreen?
+    // State variables
+    static bool displayPauseMenu = true;
+    static bool displaySettings = false;
     //bool displayServerList = false;
 
+    // Background image for pause menu
+    static Image mainmenuimg = LoadImage(asMgr->GetAssetPathByName("menubg").c_str());
+    static Texture2D mainmenubg = LoadTextureFromImage(mainmenuimg);
+
+    // Main loop
     while (!WindowShouldClose()) {
         /*
         Layer 0: Gameplay
         Layer 1: Gameplay GUIs
-        Layer 2: PauseMenu Texture
-        Layer 3: PauseMenu GUIs
+        Layer 2: PauseMenu Texture / Buttons
+        Layer 3: PauseMenu Submenus
         */
 
+        // Layer 0
+
+
         // Draw GUI/2D elements
-        ClearBackground(RAYWHITE);
         BeginDrawing();
 
         // Layer 1
         // End Layer 1
 
         // Layer 2
-        DrawTexturePro(mainmenubg, {0,0,1920,1080}, {0,0,static_cast<float>(GetScreenWidth()),static_cast<float>(GetScreenHeight())}, {0,0}, 0, WHITE);
+        if (displayPauseMenu) {
+            DrawTexturePro(mainmenubg, {0,0,1920,1080}, {0,0,static_cast<float>(GetScreenWidth()),static_cast<float>(GetScreenHeight())}, {0,0}, 0, WHITE);
+
+            // Draw the main panel in the lower quarter of the screen, with a margin
+            Rectangle quarterPanelButtonTop = {
+                (GetScreenWidth() * 0.05f),
+                (GetScreenHeight() * 0.75f),
+                50,
+                25,
+            };
+            if (GuiButton(quarterPanelButtonTop, "Settings")) {
+                displaySettings = true;
+            }
+        }
         // End Layer 2
 
         // Layer 3
@@ -51,13 +69,14 @@ int main() {
             rlImGuiBegin();
             SetupGuiStyle();
             {
-                SettingsGUI(displayConfig, asMgr, cfgMgr);
+                SettingsGUI(&displaySettings, asMgr, cfgMgr);
             }
             rlImGuiEnd();
         }
-        EndDrawing();
+
         // End Layer 3
 
+        EndDrawing();
     }
 
     // Cleanup

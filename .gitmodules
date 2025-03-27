@@ -7,3 +7,6 @@
 [submodule "src/vendor/imgui"]
 	path = src/vendor/imgui
 	url = git@github.com:ocornut/imgui.git
+[submodule "src/vendor/raygui"]
+	path = src/vendor/raygui
+	url = git@github.com:raysan5/raygui.git

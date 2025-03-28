@@ -19,15 +19,15 @@ AssetManager::AssetManager() {
     }
 }
 
-Config AssetManager::LoadConfig() {
+Config ConfigManager::LoadConfig(AssetManager * am) {
     Config config;
-    if (!std::filesystem::exists(MicrogolfFilePaths.at("config")) || std::filesystem::is_empty(MicrogolfFilePaths.at("config"))) {
+    if (!std::filesystem::exists(am->GetAssetPathByName("config")) || std::filesystem::is_empty(am->GetAssetPathByName("config"))) {
         // Save the default conf
-        SaveConfig(config);
+        SaveConfig(am, config);
         return config;
     }
 
-    std::ifstream configFile(MicrogolfFilePaths.at("config"));
+    std::ifstream configFile(am->GetAssetPathByName("config"));
     {
         // New error recover strategy:
         // Attempt to deserialize
@@ -45,8 +45,8 @@ Config AssetManager::LoadConfig() {
     return config;
 }
 
-void AssetManager::SaveConfig(Config config) {
-    std::ofstream configFile(MicrogolfFilePaths.at("config"));
+void ConfigManager::SaveConfig(AssetManager * am, Config config) {
+    std::ofstream configFile(am->GetAssetPathByName("config"));
     {
         cereal::JSONOutputArchive oarchive(configFile);
         oarchive(config);

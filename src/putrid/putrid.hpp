@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <raylib.h>
 
+// For display ratio
 enum Ratio {
     FOURBYTHREE,
     SIXTEENBYNINE,
@@ -12,6 +13,7 @@ enum Ratio {
     RATIOCOUNTER,
 };
 
+// Display Config Struct
 struct Resolution {
     int multiplier = 1; // Used to select display resolution multiplier
     int selectedRatio = SIXTEENBYNINE; //
@@ -36,17 +38,12 @@ struct Config {
     }
 };
 
-// Config functions live in here as well
+// Class for asset loading and config saving
 class AssetManager {
     public:
         // Constructor checks for file presence, dtor not required.
         AssetManager();
 
-        // Save a config to file.
-        void SaveConfig(Config config);
-
-        // Load a config from file.
-        Config LoadConfig();
 
         // Look for an asset by name to retrieve path.
         std::string GetAssetPathByName(std::string);
@@ -59,6 +56,7 @@ class AssetManager {
         };
 };
 
+// Class for loading and saving config
 class ConfigManager {
     public:
         // Load a configuration to active configuration slot and applies it.
@@ -66,8 +64,13 @@ class ConfigManager {
 
         // Get the active configuration
         const Config * GetActiveConfig();
+
+        // Save a config to file.
+        void SaveConfig(AssetManager * am, Config config);
+
+        // Load a config from file.
+        Config LoadConfig(AssetManager * am);
     private:
         Config activeConfig;
         void ApplyActiveConfig();
-
 };

@@ -81,12 +81,12 @@ void SettingsGUI(bool * run, std::shared_ptr<AssetManager> asMgr, std::shared_pt
         if (ImGui::Button("Save and Close")) {
             *run = false;
             cfgMgr->SetActiveConfig(draft_cfg);
-            asMgr->SaveConfig(*cfgMgr->GetActiveConfig());
+            cfgMgr->SaveConfig(asMgr.get(), *cfgMgr->GetActiveConfig());
         }
         ImGui::SameLine();
         if (ImGui::Button("Apply")) { // consider enabling autorevert
             cfgMgr->SetActiveConfig(draft_cfg);
-            asMgr->SaveConfig(*cfgMgr->GetActiveConfig());
+            cfgMgr->SaveConfig(asMgr.get(), *cfgMgr->GetActiveConfig());
         }
 
         // TODO: Consider adding resiziable window...

@@ -1,3 +1,6 @@
+// TODO: Scale RayGui Button fonts
+// TODO: Tie esc to pause
+
 #include "putrid/putrid.hpp"
 #include "src/vendor/rlImGui/rlImGui.h"
 #include "src/putrid/gui/common.hpp"
@@ -15,7 +18,7 @@ int main() {
     // Load config from file
     std::shared_ptr<AssetManager> asMgr = std::make_unique<AssetManager>();
     std::shared_ptr<ConfigManager> cfgMgr = std::make_unique<ConfigManager>();
-    cfgMgr->SetActiveConfig(asMgr->LoadConfig());
+    cfgMgr->SetActiveConfig(cfgMgr->LoadConfig(asMgr.get()));
 
     // Set up ImGui
     rlImGuiSetup(true);
@@ -23,7 +26,7 @@ int main() {
     // State variables
     static bool displayPauseMenu = true;
     static bool displaySettings = false;
-    //bool displayServerList = false;
+    static bool displayServerList = false;
 
     // Background image for pause menu
     static Image mainmenuimg = LoadImage(asMgr->GetAssetPathByName("menubg").c_str());
@@ -40,7 +43,6 @@ int main() {
 
         // Layer 0
 
-
         // Draw GUI/2D elements
         BeginDrawing();
 
@@ -53,13 +55,14 @@ int main() {
 
             // Draw the main panel in the lower quarter of the screen, with a margin
             Rectangle quarterPanelButtonTop = {
+                // X, Y, Width, Height
                 (GetScreenWidth() * 0.05f),
                 (GetScreenHeight() * 0.75f),
-                50,
-                25,
+                GetScreenWidth() * 0.2f,
+                GetScreenHeight() * 0.1f,
             };
             if (GuiButton(quarterPanelButtonTop, "Settings")) {
-                displaySettings = true;
+                displaySettings = !displaySettings;
             }
         }
         // End Layer 2

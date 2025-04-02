@@ -44,7 +44,6 @@ class AssetManager {
         // Constructor checks for file presence, dtor not required.
         AssetManager();
 
-
         // Look for an asset by name to retrieve path.
         std::string GetAssetPathByName(std::string);
     private:

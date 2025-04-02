@@ -1,4 +1,3 @@
-// TODO: When connecting two clients, disconnecting the first client causes the second client's peer to be mangled (but not corrupted). Why?
 #include "stinky/stinky.hpp"
 #include "packettypes.hpp"
 #include <cereal/details/helpers.hpp>

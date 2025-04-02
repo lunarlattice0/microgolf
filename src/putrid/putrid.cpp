@@ -13,7 +13,6 @@ AssetManager::AssetManager() {
                 continue;
             }
             TraceLog(LOG_ERROR, "Missing file: %s", it.second.c_str());
-           // TODO: Figure out how to yell at people on macos and windows
             std::exit(1);
         }
     }
@@ -79,6 +78,9 @@ void ConfigManager::ApplyActiveConfig() {
         InitWindow(screenWidth, screenHeight, "Microgolf");
         InitAudioDevice();
     }
+
+    // Disable exit by esc
+    SetExitKey(0);
 
     if (IsWindowFullscreen() != this->activeConfig.res.fullscreen) {
             ToggleFullscreen();

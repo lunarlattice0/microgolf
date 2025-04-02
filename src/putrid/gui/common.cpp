@@ -89,7 +89,6 @@ void SettingsGUI(bool * run, std::shared_ptr<AssetManager> asMgr, std::shared_pt
             cfgMgr->SaveConfig(asMgr.get(), *cfgMgr->GetActiveConfig());
         }
 
-        // TODO: Consider adding resiziable window...
         ImGui::End();
     }
 }

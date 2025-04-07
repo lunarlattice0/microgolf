@@ -50,8 +50,8 @@ class AssetManager {
         const std::unordered_map<std::string, std::string> MicrogolfFilePaths = {
             // The constructor will check that *ALL* these required assets are here.
             // If the files are moved around after, all bets are off!
-            {"config", std::string(GetApplicationDirectory()) + "./assets/config.cfg"},
-            {"menubg", std::string(GetApplicationDirectory()) + "./assets/out/mainmenu.png"},
+            {"config", std::string(GetApplicationDirectory()) + "/assets/config.cfg"},
+            {"menubg", std::string(GetApplicationDirectory()) + "/assets/mainmenu.png"},
         };
 };
 

@@ -12,5 +12,5 @@ class MapEditor {
         void Loop();
     private:
         // Using flycam for mapitor
-        Camera Cam;
+        Camera * Cam;
 };

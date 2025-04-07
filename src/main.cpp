@@ -1,10 +1,12 @@
 // TODO: Scale RayGui Button fonts
 // TODO: Track state somehow..
 
+#include "gui/mapeditor.hpp"
 #include "putrid/putrid.hpp"
 #include "src/vendor/rlImGui/rlImGui.h"
 #include "src/putrid/gui/common.hpp"
 #include "src/putrid/gui/style.hpp"
+#include <cstddef>
 #include <memory>
 #include <raylib.h>
 #define RAYGUI_IMPLEMENTATION
@@ -39,7 +41,7 @@ int main() {
         Layer 0: Gameplay
         Layer 1: Gameplay GUIs
         Layer 2: PauseMenu Texture / Buttons
-        Layer 3: PauseMenu Submenus
+        Layer 3: ImGui Submenus
         */
 
         // Layer 0
@@ -48,6 +50,7 @@ int main() {
             me->Loop();
             EndMode3D();
         }
+        // End Layer 0
 
         // Draw GUI/2D elements
         BeginDrawing();
@@ -85,6 +88,9 @@ int main() {
             SetupGuiStyle();
             {
                 SettingsGUI(&displaySettings, asMgr, cfgMgr);
+                if (me != NULL) {
+                    MapEditorGUI();
+                }
             }
             rlImGuiEnd();
         }

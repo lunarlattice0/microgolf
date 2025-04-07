@@ -13,7 +13,16 @@ inline void MapEditorGUI() {
     io->IniFilename = NULL;
     io->LogFilename = NULL;
 
-    ImGui::Text("Welcome to the Map Editor!\nPress / to unlock or lock the mouse.");
+    if (ImGui::BeginTabBar("MapEditorTabBar")) {
+        if (ImGui::BeginTabItem("Welcome")) {
+            ImGui::Text("Welcome to the Map Editor!\n"
+            "Press / to unlock or lock the mouse.\n"
+            "Space/Control to ascend or descend.\n"
+            "MWheelUp/Down to zoom in and zoom out.");
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
 
     ImGui::End();
 };

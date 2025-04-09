@@ -42,6 +42,8 @@ microgolf_source_files = [
     'src/stinky/stinky.cpp',
     'src/putrid/putrid.cpp',
     'src/putrid/mapeditor/mapeditor.cpp',
+
+    'src/putrid/luahelper/luahelper.cpp',
 ]
 
 microgolf_include_directories = [

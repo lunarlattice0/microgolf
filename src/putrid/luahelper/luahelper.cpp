@@ -9,7 +9,7 @@
 LuauHelper::LuauHelper() {
     this->L = luaL_newstate();
     luaL_openlibs(this->L);
-//    this->lb = new ImGuiLuaBridge(L);
+//    this->lb = new ImGuiLuaBridge(L)0;
 //    lua_pushcfunction(L, CompileAndRun, "CRS");
 //    lua_setglobal(L, "CompileAndRun");
 }
@@ -32,17 +32,6 @@ bool LuauHelper::CompileAndRun(const char * name, const char * source, int sourc
     }
 }
 
-/*
-int LuauHelper::CompileAndRun(lua_State *L) {
-    LuauHelper * tempHelper = new LuauHelper;
-    auto code = std::string(luaL_checkstring(L, -1));
-    tempHelper->CompileAndRun("user", code.c_str(), code.length() + 1);
-    delete(tempHelper);
-    return 0;
-}
-*/
-
 LuauHelper::~LuauHelper() {
-//    delete(lb);
     lua_close(this->L);
 }

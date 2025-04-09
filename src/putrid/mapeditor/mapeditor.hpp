@@ -1,4 +1,5 @@
 #pragma once
+#include "luahelper/luahelper.hpp"
 #include "putrid.hpp"
 #include "raylib.h"
 
@@ -12,5 +13,6 @@ class MapEditor {
         void Loop();
     private:
         // Using flycam for mapitor
-        Camera * Cam;
+        std::unique_ptr<Camera> Cam;
+        std::unique_ptr<LuauHelper> lh;
 };

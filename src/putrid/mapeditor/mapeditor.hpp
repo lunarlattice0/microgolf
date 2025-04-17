@@ -11,6 +11,8 @@ class MapEditor {
 
         // Call this from within Raylib's loop.
         void Loop();
+        void RunScript(std::string str);
+
     private:
         // Using flycam for mapitor
         std::unique_ptr<Camera> Cam;

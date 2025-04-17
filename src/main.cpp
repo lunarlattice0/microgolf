@@ -33,7 +33,7 @@ int main() {
     static Texture2D mainmenubg = LoadTextureFromImage(mainmenuimg);
 
     // State variables
-    std::unique_ptr<MapEditor> me = nullptr;
+    std::shared_ptr<MapEditor> me = nullptr;
 
     // Main loop
     while (!WindowShouldClose()) {
@@ -46,7 +46,7 @@ int main() {
 
         // Layer 0
         if (me != nullptr) {
-            BeginMode3D(*me->GetCamera());
+            BeginMode3D(*(me->GetCamera()));
             me->Loop();
             EndMode3D();
         }
@@ -72,7 +72,7 @@ int main() {
             };
             if (GuiButton(quarterPanelButton, "Map Editor")) {
                 displayPauseMenu = false;
-                me = std::make_unique<MapEditor>();
+                me = std::make_shared<MapEditor>();
             }
 
             quarterPanelButton.y = quarterPanelButton.y + quarterPanelButton.height + 5;
@@ -88,8 +88,8 @@ int main() {
             SetupGuiStyle();
             {
                 SettingsGUI(&displaySettings, asMgr, cfgMgr);
-                if (me != NULL) {
-                    MapEditorGUI();
+                if (me != nullptr) {
+                    MapEditorGUI(me);
                 }
             }
             rlImGuiEnd();

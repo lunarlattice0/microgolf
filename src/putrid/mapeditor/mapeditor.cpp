@@ -1,5 +1,6 @@
 #include "mapeditor/mapeditor.hpp"
 #include "gui/mapeditor.hpp"
+#include "luacode.h"
 #include "luahelper/luahelper.hpp"
 #include <memory>
 #include <raylib.h>
@@ -33,4 +34,9 @@ void MapEditor::Loop() {
         IsCursorHidden() ? EnableCursor() : DisableCursor();
     }
     //this->lh->CompileAndRun("test", "print(\"hi\")", 12);
+}
+
+void MapEditor::RunScript(std::string str) {
+    TraceLog(LOG_INFO, "Starting a lua script...");
+    lh->CompileAndRun("MapScript", str.c_str(), str.length() + 1);
 }

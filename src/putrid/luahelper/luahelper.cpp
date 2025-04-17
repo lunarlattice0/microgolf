@@ -73,8 +73,8 @@ LuauHelper::LuauHelper() {
     // RenderSvc
     // i love u stack overflow
     // https://stackoverflow.com/questions/22515908/using-straight-lua-how-do-i-expose-an-existing-c-class-objec-for-use-in-a-lua
-    *reinterpret_cast<RenderSvc**>(lua_newuserdatadtor(L, sizeof(RenderSvc*), [](void * rs) -> void {
-        delete *reinterpret_cast<RenderSvc**>(rs);
+    *static_cast<RenderSvc**>(lua_newuserdatadtor(L, sizeof(RenderSvc*), [](void * rs) -> void {
+        delete *static_cast<RenderSvc**>(rs);
     })) = new RenderSvc();
 
     luaL_newmetatable(L, "RenderSvc");

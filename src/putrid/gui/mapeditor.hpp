@@ -10,8 +10,8 @@
 #include "vendor/imgui/misc/cpp/imgui_stdlib.h"
 
 inline void MapEditorGUI(std::shared_ptr<MapEditor> me) {
-    ImGui::Begin("Map Editor", NULL, ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin("Map Editor", NULL, ImGuiWindowFlags_NoSavedSettings
+    );
 
     // Disable imgui config
     ImGuiIO* io = &ImGui::GetIO();

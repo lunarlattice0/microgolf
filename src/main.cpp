@@ -16,8 +16,8 @@
 int main() {
 
     // Load config from file
-    std::shared_ptr<AssetManager> asMgr = std::make_unique<AssetManager>();
-    std::shared_ptr<ConfigManager> cfgMgr = std::make_unique<ConfigManager>();
+    std::shared_ptr<AssetManager> asMgr = std::make_shared<AssetManager>();
+    std::shared_ptr<ConfigManager> cfgMgr = std::make_shared<ConfigManager>();
     cfgMgr->SetActiveConfig(cfgMgr->LoadConfig(asMgr.get()));
 
     // Set up ImGui

@@ -9,9 +9,9 @@
 LuauHelper::LuauHelper() {
     this->L = luaL_newstate();
     luaL_openlibs(this->L);
-//    this->lb = new ImGuiLuaBridge(L)0;
-//    lua_pushcfunction(L, CompileAndRun, "CRS");
-//    lua_setglobal(L, "CompileAndRun");
+    lua_pushcfunction(L, print, "print");
+    lua_setglobal(L, "print");
+
 }
 
 // Compile a lua file into bytecode and run it.

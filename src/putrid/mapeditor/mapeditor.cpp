@@ -37,6 +37,5 @@ void MapEditor::Loop() {
 }
 
 void MapEditor::RunScript(std::string str) {
-    TraceLog(LOG_INFO, "Starting a lua script...");
     lh->CompileAndRun("MapScript", str.c_str(), str.length() + 1);
 }

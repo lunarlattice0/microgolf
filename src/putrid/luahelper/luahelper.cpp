@@ -2,10 +2,23 @@
 #include "luacode.h"
 #include "lualib.h"
 #include "lua.h"
+#include <cstddef>
 #include <cstdlib>
 #include <raylib.h>
 
-// TODO: Set up a Render() function to be called from Raylib
+// Note (Apr 19, 2025):
+// 1)
+// it seems luau does not support storing references outside of LUA_REGISTRYINDEX...
+// 2)
+// The compiler will not be happy if you pop a lua string BEFORE a function call using that string (even if you make a new var).
+// This is not solvable with `volatile` since std::string cannot be marked `volatile`.
+// ...Just pop after the function call...
+// Addendum:
+// Do NOT use std::string created from lua's const char *. I don't think the compiler manages std::string's lifetime properly, and its dtors may not be triggered
+// properly, leaking a ton of memory.
+// TLDR: the compiler is optimizing out the deep copy for reference swapping instead because it doesn't know about lua_pop
+// and then the string becomes SILENTLY invalid when passed to another function
+
 
 // Lua function definitions
 
@@ -28,36 +41,51 @@ static int print(lua_State *L) {
 //
 
 // Render Services
+// Initialization done in ctor of luahelper.
 
-static int RenderSvc_new(lua_State *L) {
-    luaL_newmetatable(L, "RenderSvc");
-    *reinterpret_cast<RenderSvc**>(lua_newuserdata(L, sizeof(RenderSvc*))) = new RenderSvc();
-    lua_setmetatable(L, -2); // TODO: Unsure about this...
-
-    return 1;
+void RenderSvc::AddTask(int ref, const char * fname) {
+    this->activeCallbacks[fname] = ref;
+}
+void RenderSvc::RemoveTask(const char * fname) {
+    this->activeCallbacks.erase(fname);
 }
 
-/*
-Why think when you could use lambdas....
-void RenderSvc_delete(void * rs) {
-    delete *reinterpret_cast<RenderSvc**>(rs);
-    // are you feeling it now mr krabs
+int RenderSvc::GetTask(const char * fname) {
+    return this->activeCallbacks[fname];
 }
-*/
 
+void RenderSvc::CallRenderCallbacks(lua_State *L) {
+    for (auto it : this->activeCallbacks) {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, it.second);
+        lua_pushnumber(L, GetFrameTime());
+        lua_pcall(L, 1, 0, 0);
+    }
+}
+
+// Callback's first arg will be delta time.
+// Syntax is RenderSvc:AddTask(function, "function_name")
 static int RenderSvc_AddTask(lua_State *L) {
-    // STUB
-    std::cout << "Addtask called!" << std::endl;
+
+    if (lua_gettop(L) == 3 && lua_isfunction(L, 2) && lua_isstring(L, 3)) {
+        auto fname = lua_tostring(L, 3);
+        int ref = lua_ref(L, -2);
+        (*static_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")))->AddTask(ref, fname);
+        lua_pop(L, -1);
+        lua_pop(L, -1);
+    }
     return 0;
 }
 
+// Syntax is RenderSvc:RemoveTask("function_name")
 static int RenderSvc_RemoveTask(lua_State *L) {
-    // STUB
-    std::cout << "Removetask called!" << std::endl;
+    if (lua_gettop(L) == 2 && lua_isstring(L, 2)) {
+        lua_pushvalue(L, -1);
+        int ref = (*reinterpret_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")))->GetTask(lua_tostring(L, -1));
+        (*reinterpret_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")))->RemoveTask(lua_tostring(L, -1));
+        lua_unref(L, ref);
+    }
     return 0;
 }
-//
-
 // End lua definitions
 
 
@@ -77,6 +105,7 @@ LuauHelper::LuauHelper() {
         delete *static_cast<RenderSvc**>(rs);
     })) = new RenderSvc();
 
+
     luaL_newmetatable(L, "RenderSvc");
     lua_pushvalue(L, -1);
     lua_setfield(L, -2, "__index");
@@ -88,6 +117,8 @@ LuauHelper::LuauHelper() {
     lua_setfield(L, -2, "RemoveTask");
 
     lua_setmetatable(L, -2);
+    lua_pushvalue(L, -1);
+    this->renderSvc = (*reinterpret_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")));
     lua_setglobal(L, "RenderSvc");
 }
 
@@ -107,6 +138,10 @@ bool LuauHelper::CompileAndRun(const char * name, const char * source, int sourc
         lua_pop(L,1);
         return false;
     }
+}
+
+void LuauHelper::CallServiceCallbacks() {
+    this->renderSvc->CallRenderCallbacks(this->L);
 }
 
 LuauHelper::~LuauHelper() {

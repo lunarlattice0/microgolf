@@ -25,6 +25,7 @@ const Camera * MapEditor::GetCamera() {
 }
 
 void MapEditor::Loop() {
+    lh->CallServiceCallbacks();
     ClearBackground(WHITE);
     DrawGrid(10, 1.0f);
     if (IsCursorHidden()) {
@@ -33,7 +34,6 @@ void MapEditor::Loop() {
     if (IsKeyPressed(KEY_SLASH)) {
         IsCursorHidden() ? EnableCursor() : DisableCursor();
     }
-    //this->lh->CompileAndRun("test", "print(\"hi\")", 12);
 }
 
 void MapEditor::RunScript(std::string str) {

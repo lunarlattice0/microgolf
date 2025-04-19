@@ -19,6 +19,9 @@
 // TLDR: the compiler is optimizing out the deep copy for reference swapping instead because it doesn't know about lua_pop
 // and then the string becomes SILENTLY invalid when passed to another function
 
+// As suggested by slappy, use tagged userdata instead
+// faster?
+#define RENDERSVC_TAG 2
 
 // Lua function definitions
 
@@ -69,7 +72,7 @@ static int RenderSvc_AddTask(lua_State *L) {
     if (lua_gettop(L) == 3 && lua_isfunction(L, 2) && lua_isstring(L, 3)) {
         auto fname = lua_tostring(L, 3);
         int ref = lua_ref(L, -2);
-        (*static_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")))->AddTask(ref, fname);
+        (*static_cast<RenderSvc**>(lua_touserdatatagged(L, 1, RENDERSVC_TAG)))->AddTask(ref, fname);
         lua_pop(L, -1);
         lua_pop(L, -1);
     }
@@ -80,8 +83,8 @@ static int RenderSvc_AddTask(lua_State *L) {
 static int RenderSvc_RemoveTask(lua_State *L) {
     if (lua_gettop(L) == 2 && lua_isstring(L, 2)) {
         lua_pushvalue(L, -1);
-        int ref = (*reinterpret_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")))->GetTask(lua_tostring(L, -1));
-        (*reinterpret_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")))->RemoveTask(lua_tostring(L, -1));
+        int ref = (*reinterpret_cast<RenderSvc**>(lua_touserdatatagged(L, 1, RENDERSVC_TAG)))->GetTask(lua_tostring(L, -1));
+        (*reinterpret_cast<RenderSvc**>(lua_touserdatatagged(L, 1, RENDERSVC_TAG)))->RemoveTask(lua_tostring(L, -1));
         lua_unref(L, ref);
     }
     return 0;
@@ -101,10 +104,14 @@ LuauHelper::LuauHelper() {
     // RenderSvc
     // i love u stack overflow
     // https://stackoverflow.com/questions/22515908/using-straight-lua-how-do-i-expose-an-existing-c-class-objec-for-use-in-a-lua
-    *static_cast<RenderSvc**>(lua_newuserdatadtor(L, sizeof(RenderSvc*), [](void * rs) -> void {
-        delete *static_cast<RenderSvc**>(rs);
-    })) = new RenderSvc();
-
+    //*static_cast<RenderSvc**>(lua_newuserdatadtor(L, sizeof(RenderSvc*), [](void * rs) -> void {
+    //    delete *static_cast<RenderSvc**>(rs);
+    //})) = new RenderSvc();
+    *static_cast<RenderSvc**>(lua_newuserdatatagged(L, sizeof(RenderSvc*), RENDERSVC_TAG)) = new RenderSvc();
+    lua_setuserdatadtor(L, RENDERSVC_TAG, [](lua_State *L, void * rs) -> void {
+        (void)L;
+        delete * static_cast<RenderSvc**>(rs);
+    });
 
     luaL_newmetatable(L, "RenderSvc");
     lua_pushvalue(L, -1);
@@ -118,7 +125,7 @@ LuauHelper::LuauHelper() {
 
     lua_setmetatable(L, -2);
     lua_pushvalue(L, -1);
-    this->renderSvc = (*reinterpret_cast<RenderSvc**>(luaL_checkudata(L, 1, "RenderSvc")));
+    this->renderSvc = (*reinterpret_cast<RenderSvc**>(lua_touserdatatagged(L, 1, RENDERSVC_TAG)));
     lua_setglobal(L, "RenderSvc");
 }
 

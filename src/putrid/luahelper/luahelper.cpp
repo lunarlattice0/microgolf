@@ -54,7 +54,14 @@ void RenderSvc::RemoveTask(const char * fname) {
 }
 
 int RenderSvc::GetTask(const char * fname) {
-    return this->activeCallbacks[fname];
+    auto idx = this->activeCallbacks.find(fname);
+    if (idx != activeCallbacks.end()) {
+        // Return IDX if found
+        return idx->second;
+    } else {
+        // Return null if not
+        return 0;
+    }
 }
 
 void RenderSvc::CallRenderCallbacks(lua_State *L) {
@@ -72,6 +79,12 @@ static int RenderSvc_AddTask(lua_State *L) {
     if (lua_gettop(L) == 3 && lua_isfunction(L, 2) && lua_isstring(L, 3)) {
         auto fname = lua_tostring(L, 3);
         int ref = lua_ref(L, -2);
+
+        // Destroy the existing task (unsure if this solves a memory leak?)
+        if ((*static_cast<RenderSvc**>(lua_touserdatatagged(L, 1, RENDERSVC_TAG)))->GetTask(fname) != 0) {
+            (*static_cast<RenderSvc**>(lua_touserdatatagged(L, 1, RENDERSVC_TAG)))->RemoveTask(fname);
+        }
+
         (*static_cast<RenderSvc**>(lua_touserdatatagged(L, 1, RENDERSVC_TAG)))->AddTask(ref, fname);
         lua_pop(L, -1);
         lua_pop(L, -1);

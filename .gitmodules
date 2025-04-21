@@ -10,3 +10,6 @@
 [submodule "src/vendor/raygui"]
 	path = src/vendor/raygui
 	url = git@github.com:raysan5/raygui.git
+[submodule "src/vendor/entt"]
+	path = src/vendor/entt
+	url = git@github.com:skypjack/entt.git

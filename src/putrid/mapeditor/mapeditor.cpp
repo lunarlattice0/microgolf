@@ -1,11 +1,43 @@
 #include "mapeditor/mapeditor.hpp"
-#include "gui/mapeditor.hpp"
-#include "luacode.h"
 #include "luahelper/luahelper.hpp"
+#include <cereal/archives/json.hpp>
+#include <cereal/details/helpers.hpp>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <raylib.h>
+#include <stdexcept>
+
+void MapEditor::LoadMap(const char * path) {
+    if (this->activeMap != nullptr) {
+        this->activeMap.reset(); // TODO: Prompt the user to save.
+    }
+
+    Map test;
+    if (std::filesystem::exists(path)) {
+        // Attempt to load from file.
+        std::ifstream mapFile(path);
+        try {
+            {
+                cereal::JSONInputArchive iarchive(mapFile);
+                iarchive(test);
+            }
+        } catch (const cereal::Exception& e) {
+            throw std::runtime_error("Failed to open map.");
+        }
+    }
+}
+/*
+void MapEditor::SaveMap(const char * path) {
+    std::ofstream mapFile(path);
+    {
+        cereal::JSONOutputArchive oarchive(mapFile);
+        oarchive(this->activeMap);
+    }
+    }*/
 
 MapEditor::MapEditor() {
+    this->activeMap = nullptr;
     this->Cam = std::make_unique<Camera>();
     this->Cam->projection = CAMERA_PERSPECTIVE;
     this->Cam->position = {1.0f, 1.0f, 1.0f};

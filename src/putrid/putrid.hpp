@@ -24,7 +24,14 @@ struct Resolution {
     bool fullscreen = false;
     template <class Archive>
         void serialize(Archive &archive) {
-            archive(multiplier, selectedRatio, selectedMonitor, x, y, fullscreen, targetFPS);
+            archive(CEREAL_NVP(multiplier),
+                CEREAL_NVP(selectedRatio),
+                CEREAL_NVP(selectedMonitor),
+                CEREAL_NVP(x),
+                CEREAL_NVP(y),
+                CEREAL_NVP(fullscreen),
+                CEREAL_NVP(targetFPS)
+            );
         }
 };
 
@@ -34,7 +41,7 @@ struct Config {
     uint fontSize = 15;
     template <class Archive>
     void serialize(Archive &archive) {
-        archive(res, fontSize);
+        archive(CEREAL_NVP(res), CEREAL_NVP(fontSize));
     }
 };
 
@@ -50,8 +57,8 @@ class AssetManager {
         const std::unordered_map<std::string, std::string> MicrogolfFilePaths = {
             // The constructor will check that *ALL* these required assets are here.
             // If the files are moved around after, all bets are off!
-            {"config", std::string(GetApplicationDirectory()) + "/assets/config.cfg"},
-            {"menubg", std::string(GetApplicationDirectory()) + "/assets/mainmenu.png"},
+            {"config", std::string(GetApplicationDirectory()) + "assets/config.cfg"},
+            {"menubg", std::string(GetApplicationDirectory()) + "assets/mainmenu.png"},
         };
 };
 

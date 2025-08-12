@@ -1,7 +1,7 @@
 project('microgolf', ['cpp', 'c'],
           version: '0.0.1',
     meson_version: '>= 0.62.0',
-    default_options: [ 'warning_level=2', 'werror=false', 'cpp_std=gnu++2a', 'optimization=3',],
+    default_options: [ 'warning_level=2', 'werror=false', 'cpp_std=gnu++2a', 'optimization=3',], #'-Db_sanitize=address,leak,undefined'],
 )
 cmake = import('cmake')
 
@@ -44,6 +44,8 @@ microgolf_source_files = [
     'src/putrid/mapeditor/mapeditor.cpp',
 
     'src/putrid/luahelper/luahelper.cpp',
+
+    'src/putrid/world/world.cpp',
 ]
 
 microgolf_include_directories = [

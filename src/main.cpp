@@ -6,7 +6,6 @@
 #include "src/vendor/rlImGui/rlImGui.h"
 #include "src/putrid/gui/common.hpp"
 #include "src/putrid/gui/style.hpp"
-#include <cstddef>
 #include <memory>
 #include <raylib.h>
 #define RAYGUI_IMPLEMENTATION

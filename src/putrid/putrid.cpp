@@ -5,6 +5,7 @@
 #include <fstream>
 #include <filesystem>
 
+// Overhaul this garbage, i hate it.
 AssetManager::AssetManager() {
     for (auto it : MicrogolfFilePaths) {
         if (!std::filesystem::exists(it.second)) {
